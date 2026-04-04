@@ -291,7 +291,8 @@ environment:
 When enabled:
 - Concurrent subprocess limit reduced from 6 → 3
 - Default monitor interval increased from 60s → 120s
-- Docker resource limits set to 512 MB RAM and 3 CPU cores
+
+The included `docker-compose.yml` also sets resource limits (512 MB RAM, 3 CPU cores) suitable for Pi-class hardware.
 
 ---
 
