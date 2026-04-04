@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamRec</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23ef4444'/><circle cx='50' cy='50' r='20' fill='white'/></svg>">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #111113;
+  --s1:      #18181b;
+  --s2:      #1f1f23;
+  --s3:      #26262c;
+  --border:  #2c2c32;
+  --border2: #38383f;
+  --text:    #f1f1f3;
+  --sub:     #8b8b96;
+  --muted:   #4a4a54;
+  --red:     #ef4444;
+  --blue:    #3b82f6;
+  --green:   #22c55e;
+  --amber:   #f59e0b;
+  --purple:  #a855f7;
+  --mono:    'SF Mono', 'Cascadia Mono', 'Consolas', 'DejaVu Sans Mono', monospace;
+  --sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --sidebar: 56px;
+}
+html.light {
+  --bg:      #f5f5f7;
+  --s1:      #ffffff;
+  --s2:      #f0f0f2;
+  --s3:      #e8e8ec;
+  --border:  #d4d4da;
+  --border2: #c0c0c8;
+  --text:    #111113;
+  --sub:     #6b6b78;
+  --muted:   #9b9ba6;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; display: flex; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar); background: var(--s1); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 2px; flex-shrink: 0; z-index: 50;
+}
+.logo-btn {
+  width: 38px; height: 38px; background: var(--red); border-radius: 11px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 14px; flex-shrink: 0; cursor: pointer; border: none;
+  transition: transform 0.15s;
+}
+.logo-btn:hover { transform: scale(1.05); }
+.logo-btn svg { width: 20px; height: 20px; }
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.15s; position: relative;
+}
+.nav-btn:hover { background: var(--s2); color: var(--sub); }
+.nav-btn.active { background: var(--s3); color: var(--text); }
+.nav-btn svg { width: 18px; height: 18px; }
+.sidebar-spacer { flex: 1; }
+.nav-badge {
+  position: absolute; top: 5px; right: 5px; width: 8px; height: 8px;
+  background: var(--red); border-radius: 50%; border: 2px solid var(--s1);
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Pages ── */
+.page { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.page.active { display: flex; }
+
+/* ── Topbar ── */
+.topbar {
+  height: 54px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 10px; flex-shrink: 0;
+  background: var(--s1);
+}
+.topbar-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.topbar-sub { font-size: 12px; color: var(--sub); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.search-wrap { position: relative; display: flex; align-items: center; }
+.search-ico { position: absolute; left: 9px; color: var(--muted); display: flex; pointer-events: none; }
+.search-ico svg { width: 14px; height: 14px; }
+.search-input {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px 6px 30px; font-family: var(--sans); font-size: 13px; color: var(--text);
+  width: 190px; outline: none; transition: border-color 0.15s, width 0.2s;
+}
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--border2); width: 230px; }
+.icon-btn {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--s2);
+  border: 1px solid var(--border); color: var(--sub); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+}
+.icon-btn:hover { border-color: var(--border2); color: var(--text); }
+.icon-btn svg { width: 14px; height: 14px; }
+.add-btn {
+  background: var(--blue); border: none; border-radius: 8px; color: #fff;
+  font-family: var(--sans); font-weight: 600; font-size: 13px; padding: 0 14px; height: 32px;
+  cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.15s; white-space: nowrap;
+}
+.add-btn:hover { background: #2563eb; }
+.add-btn svg { width: 13px; height: 13px; }
+
+/* ── Grid ── */
+.grid-area { flex: 1; overflow-y: auto; padding: 16px; }
+.channels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+
+/* ── Card ── */
+.ch-card {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; transition: border-color 0.15s; cursor: default;
+  contain: layout style;
+}
+.ch-card:hover { border-color: var(--border2); }
+.ch-card.is-live { border-color: rgba(239,68,68,0.35); }
+
+/* Thumbnail */
+.card-thumb { width: 100%; aspect-ratio: 16/7; background: var(--s2); position: relative; overflow: hidden; }
+.thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb-fallback {
+  position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr;
+}
+.thumb-cell { background: var(--s2); }
+.thumb-cell:nth-child(2) { background: #1a1a1f; }
+.thumb-cell:nth-child(3) { background: #1c1c22; }
+.thumb-cell:nth-child(4) { background: var(--s2); }
+
+.live-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--red); color: #fff; font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 2px 7px; border-radius: 4px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.04em;
+}
+.live-dot { width: 5px; height: 5px; background: #fff; border-radius: 50%; animation: blink 1s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+.checking-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(0,0,0,0.6); color: var(--amber); font-family: var(--mono); font-size: 10px;
+  padding: 2px 7px; border-radius: 4px; display: flex; align-items: center; gap: 4px;
+}
+.checking-dot { width: 5px; height: 5px; background: var(--amber); border-radius: 50%; animation: blink 0.6s step-end infinite; }
+
+.monitoring-off-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(0,0,0,0.6); color: var(--muted); font-family: var(--mono); font-size: 10px;
+  padding: 2px 7px; border-radius: 4px;
+}
+
+/* Card body */
+.card-body { padding: 11px 13px 0; }
+
+/* Streamer info row */
+.streamer-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pfp-wrap { position: relative; flex-shrink: 0; }
+.pfp {
+  width: 38px; height: 38px; border-radius: 50%; object-fit: cover; display: block;
+  background: var(--s3); border: 2px solid var(--border);
+}
+.pfp-fallback {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--s3); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 15px; color: var(--sub); text-transform: uppercase;
+}
+.plat-pip {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--s1);
+  display: flex; align-items: center; justify-content: center; font-size: 9px;
+}
+.streamer-meta { min-width: 0; flex: 1; }
+.streamer-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.streamer-username { font-size: 11px; color: var(--sub); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.streamer-plat { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Stats */
+.card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.stat-item { display: flex; flex-direction: column; gap: 2px; }
+.stat-lbl { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+.stat-lbl svg { width: 10px; height: 10px; }
+.stat-val { font-family: var(--mono); font-size: 11.5px; color: var(--text); font-weight: 500; }
+.stat-val.dim { color: var(--muted); }
+
+/* Status pills */
+.status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.pill { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; }
+.pill svg { width: 11px; height: 11px; }
+.pill.monitoring { color: var(--green); }
+.pill.pill-off    { color: var(--muted); }
+.pill.live        { color: var(--red); }
+.pill.recording   { color: var(--blue); }
+.pill.completed   { color: var(--green); }
+.pill.error       { color: var(--muted); }
+
+/* Card actions */
+.card-actions {
+  border-top: 1px solid var(--border); padding: 7px 13px;
+  display: flex; align-items: center; gap: 4px;
+}
+.toggle-area { margin-right: auto; display: flex; align-items: center; gap: 6px; }
+.toggle {
+  width: 34px; height: 19px; background: var(--blue); border-radius: 10px;
+  position: relative; cursor: pointer; border: none; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle.off { background: var(--border); }
+.toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 13px; height: 13px; background: #fff; border-radius: 50%; transition: transform 0.2s;
+}
+.toggle.off::after { transform: translateX(0); }
+.toggle:not(.off)::after { transform: translateX(15px); }
+.toggle-label { font-size: 11px; color: var(--muted); }
+
+.act-btn {
+  width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.15s;
+}
+.act-btn:hover { background: var(--s2); color: var(--sub); }
+.act-btn.danger:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+.act-btn.success:hover { color: var(--green); background: rgba(34,197,94,0.1); }
+.act-btn.warn:hover { color: var(--amber); background: rgba(245,158,11,0.1); }
+.act-btn svg { width: 13px; height: 13px; }
+.act-sep { width: 1px; height: 14px; background: var(--border); margin: 0 2px; }
+
+/* ── Modals ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 16px;
+  width: 460px; padding: 26px; animation: min 0.18s ease; max-height: 90vh; overflow-y: auto;
+}
+.modal.wide { width: 540px; }
+@keyframes min { from{opacity:0;transform:scale(0.95) translateY(6px)} to{opacity:1;transform:none} }
+.modal-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 20px; }
+.modal-section { font-size: 11px; color: var(--sub); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.field { margin-bottom: 12px; }
+.field-lbl { font-size: 11px; color: var(--sub); letter-spacing: 0.04em; margin-bottom: 5px; text-transform: uppercase; font-weight: 500; }
+.field-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 11px; font-family: var(--mono); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s;
+}
+.field-input:focus { border-color: var(--blue); }
+.field-input::placeholder { color: var(--muted); }
+select.field-input { cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a4a54'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.platform-detect { font-size: 11px; margin-top: 5px; min-height: 15px; display: flex; align-items: center; gap: 6px; color: var(--sub); }
+.detect-badge { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.25); padding: 1px 7px; border-radius: 4px; font-family: var(--mono); font-size: 10px; }
+
+/* Toggle row */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info { display: flex; flex-direction: column; gap: 2px; }
+.toggle-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.toggle-desc { font-size: 11px; color: var(--sub); }
+.sm-toggle {
+  width: 36px; height: 20px; background: var(--blue); border-radius: 10px;
+  position: relative; cursor: pointer; border: none; transition: background 0.2s; flex-shrink: 0;
+}
+.sm-toggle.off { background: var(--border); }
+.sm-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform 0.2s;
+}
+.sm-toggle.off::after { transform: translateX(0); }
+.sm-toggle:not(.off)::after { transform: translateX(16px); }
+
+/* Modal actions */
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+.btn-cancel {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--sub);
+  font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 0 14px; height: 34px; cursor: pointer; transition: all 0.15s;
+}
+.btn-cancel:hover { border-color: var(--border2); color: var(--text); }
+.btn-primary {
+  background: var(--blue); border: none; border-radius: 8px; color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 0 18px; height: 34px;
+  cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { background: #2563eb; }
+.btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+.btn-danger { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; color: var(--red); font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 0 14px; height: 34px; cursor: pointer; transition: all 0.15s; }
+.btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+/* ── Settings page ── */
+.settings-body { flex: 1; overflow-y: auto; padding: 24px; max-width: 640px; }
+.settings-section { margin-bottom: 32px; }
+.settings-section-title { font-size: 13px; font-weight: 600; color: var(--sub); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+.settings-card { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-info { display: flex; flex-direction: column; gap: 2px; }
+.settings-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.settings-desc { font-size: 11px; color: var(--sub); }
+.settings-control { flex-shrink: 0; }
+.settings-select {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-family: var(--mono); font-size: 12px; padding: 5px 26px 5px 9px;
+  outline: none; cursor: pointer; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a4a54'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.settings-select:focus { border-color: var(--blue); }
+.settings-input {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-family: var(--mono); font-size: 12px; padding: 5px 9px;
+  outline: none; width: 70px; text-align: right;
+}
+.settings-input:focus { border-color: var(--blue); }
+
+/* ── Log drawer ── */
+.log-drawer {
+  position: fixed; bottom: 0; left: var(--sidebar); right: 0; height: 200px;
+  background: #0c0c0e; border-top: 1px solid var(--border); z-index: 100;
+  transform: translateY(100%); transition: transform 0.22s ease;
+  display: flex; flex-direction: column;
+}
+.log-drawer.open { transform: translateY(0); }
+.log-hdr { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.log-title-txt { font-family: var(--mono); font-size: 11px; color: var(--sub); letter-spacing: 0.05em; }
+.log-close { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; display: flex; }
+.log-close svg { width: 14px; height: 14px; }
+.log-body { flex: 1; overflow-y: auto; padding: 8px 14px; display: flex; flex-direction: column; gap: 1px; }
+.log-line { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+.log-line.err { color: #f87171; }
+
+/* ── Empty ── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 280px; gap: 10px; color: var(--muted); }
+.empty-state svg { width: 36px; height: 36px; opacity: 0.25; }
+.empty-state p { font-size: 13px; }
+.empty-state small { font-size: 11px; opacity: 0.6; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 18px; right: 18px; background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 14px; font-size: 12px; color: var(--text);
+  opacity: 0; transform: translateY(6px); transition: all 0.18s; pointer-events: none; z-index: 500; max-width: 260px;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Disk indicator ── */
+.disk-indicator { display: flex; align-items: center; gap: 8px; }
+.disk-bar { width: 80px; height: 6px; background: var(--s3); border-radius: 3px; overflow: hidden; }
+.disk-fill { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.3s; }
+.disk-fill.warn { background: var(--amber); }
+.disk-fill.danger { background: var(--red); }
+.disk-text { font-family: var(--mono); font-size: 11px; color: var(--sub); white-space: nowrap; }
+
+/* ── Recordings list ── */
+.rec-list { display: flex; flex-direction: column; gap: 6px; }
+.rec-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 10px;
+  transition: border-color 0.15s;
+}
+.rec-row:hover { border-color: var(--border2); }
+.rec-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--s3); display: flex; align-items: center; justify-content: center; color: var(--sub); flex-shrink: 0; }
+.rec-icon svg { width: 16px; height: 16px; }
+.rec-info { flex: 1; min-width: 0; }
+.rec-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-meta { font-size: 11px; color: var(--sub); font-family: var(--mono); display: flex; gap: 10px; flex-wrap: wrap; }
+.rec-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.rec-status { font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+.rec-status.recording { background: rgba(59,130,246,0.12); color: var(--blue); }
+.rec-status.completed { background: rgba(34,197,94,0.12); color: var(--green); }
+.rec-status.error { background: rgba(239,68,68,0.12); color: var(--red); }
+.rec-status.starting { background: rgba(245,158,11,0.12); color: var(--amber); }
+
+/* ── Light theme overrides ── */
+html.light .ch-card:hover { border-color: var(--border2); }
+html.light .overlay { background: rgba(0,0,0,0.3); }
+html.light .logo-btn svg circle { fill: #fff; }
+html.light .log-drawer { background: #fafafa; }
+html.light .log-line { color: var(--sub); }
+html.light .plat-tiktok { background: #333; }
+
+/* ── Multi-select ── */
+.ch-card.selected { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
+.select-checkbox {
+  position: absolute; top: 8px; right: 8px; width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.5); border-radius: 5px; background: rgba(0,0,0,0.4);
+  cursor: pointer; z-index: 5; display: none; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.select-mode .select-checkbox { display: flex; }
+.ch-card.selected .select-checkbox { background: var(--blue); border-color: var(--blue); }
+.ch-card.selected .select-checkbox::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; }
+
+.bulk-bar {
+  display: none; align-items: center; gap: 8px; padding: 8px 16px;
+  background: var(--s1); border-bottom: 1px solid var(--border);
+}
+.bulk-bar.show { display: flex; }
+.bulk-count { font-size: 12px; color: var(--sub); font-family: var(--mono); }
+.bulk-btn {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--sub); font-family: var(--sans); font-size: 12px; font-weight: 500;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.bulk-btn:hover { border-color: var(--border2); color: var(--text); }
+.bulk-btn.danger { color: var(--red); }
+.bulk-btn.danger:hover { background: rgba(239,68,68,0.1); }
+
+/* ── Drag-and-drop ── */
+.ch-card.dragging { opacity: 0.4; }
+.ch-card.drag-over { border-color: var(--blue); border-style: dashed; }
+
+/* ── Video preview ── */
+.preview-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  z-index: 300; display: none; align-items: center; justify-content: center; flex-direction: column;
+}
+.preview-overlay.open { display: flex; }
+.preview-close {
+  position: absolute; top: 16px; right: 16px; background: none; border: none;
+  color: #fff; cursor: pointer; opacity: 0.7; transition: opacity 0.15s;
+}
+.preview-close:hover { opacity: 1; }
+.preview-close svg { width: 24px; height: 24px; }
+.preview-video {
+  max-width: 90vw; max-height: 80vh; border-radius: 12px; background: #000;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.preview-title { color: #fff; font-size: 13px; margin-top: 12px; opacity: 0.7; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  :root { --sidebar: 0px; }
+  .sidebar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 52px; width: 100%;
+    flex-direction: row; padding: 0 8px; gap: 4px; z-index: 100;
+    border-right: none; border-top: 1px solid var(--border);
+    justify-content: center;
+  }
+  .logo-btn { width: 34px; height: 34px; margin-bottom: 0; margin-right: 8px; border-radius: 9px; }
+  .logo-btn svg { width: 16px; height: 16px; }
+  .nav-btn { width: 36px; height: 36px; }
+  .nav-btn svg { width: 16px; height: 16px; }
+  .sidebar-spacer { display: none; }
+  body { flex-direction: column; }
+  .main { padding-bottom: 52px; }
+  .topbar { padding: 0 12px; height: 48px; flex-wrap: wrap; }
+  .topbar-title { font-size: 14px; }
+  .search-wrap { order: 10; width: 100%; }
+  .search-input { width: 100%; }
+  .search-input:focus { width: 100%; }
+  .add-btn { padding: 0 10px; height: 30px; font-size: 12px; }
+  .add-btn svg { width: 11px; height: 11px; }
+  .grid-area { padding: 10px; }
+  .channels-grid { grid-template-columns: 1fr; gap: 8px; }
+  .modal { width: 95vw; padding: 18px; border-radius: 12px; }
+  .modal.wide { width: 95vw; }
+  .log-drawer { left: 0; height: 180px; bottom: 52px; }
+  .settings-body { padding: 14px; }
+  .field-row { flex-direction: column; gap: 0; }
+  .card-actions { flex-wrap: wrap; gap: 3px; padding: 6px 10px; }
+  .bulk-bar { flex-wrap: wrap; padding: 6px 10px; }
+  .preview-video { max-width: 95vw; max-height: 70vh; }
+  .topbar-right { gap: 6px; }
+}
+@media (max-width: 480px) {
+  .topbar-sub { display: none; }
+  .disk-indicator { display: none; }
+}
+
+/* ── Import/Export ── */
+.ie-row { display: flex; gap: 8px; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Platform colors */
+.plat-twitch    { background: #6441a5; }
+.plat-youtube   { background: #ff0000; }
+.plat-tiktok    { background: #010101; }
+.plat-kick      { background: #53fc18; color: #000 !important; }
+.plat-bilibili  { background: #00a1d6; }
+.plat-default   { background: var(--s3); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <button class="logo-btn" onclick="navigate('channels')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+      <circle cx="12" cy="12" r="4" fill="#fff" stroke="none"/>
+      <circle cx="12" cy="12" r="9"/>
+    </svg>
+  </button>
+  <button class="nav-btn active" id="nav-channels" onclick="navigate('channels')" title="Channels">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+    <span class="nav-badge" id="live-badge" style="display:none"></span>
+  </button>
+  <div class="sidebar-spacer"></div>
+  <button class="nav-btn" id="nav-recordings" onclick="navigate('recordings')" title="Recordings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  </button>
+  <button class="nav-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="theme-icon">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="navigate('settings')" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+</nav>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Channels page -->
+  <div class="page active" id="page-channels">
+    <div class="topbar">
+      <span class="topbar-title">Channels</span>
+      <span class="topbar-sub" id="channel-count">0 channels</span>
+      <div class="topbar-right">
+        <div class="search-wrap">
+          <span class="search-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <input class="search-input" id="searchInput" placeholder="Search channels…" oninput="filterCards()">
+        </div>
+        <button class="add-btn" onclick="openAddModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          ADD
+        </button>
+        <button class="icon-btn" onclick="toggleSelectMode()" title="Multi-select" id="selectModeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="grid-area">
+      <div class="bulk-bar" id="bulkBar">
+        <span class="bulk-count" id="bulkCount">0 selected</span>
+        <button class="bulk-btn" onclick="bulkAction('record')">Record All</button>
+        <button class="bulk-btn" onclick="bulkAction('stop')">Stop All</button>
+        <button class="bulk-btn danger" onclick="bulkAction('delete')">Delete All</button>
+        <button class="bulk-btn" onclick="exitSelectMode()" style="margin-left:auto">Cancel</button>
+      </div>
+      <div class="channels-grid" id="channelsGrid"></div>
+    </div>
+  </div>
+
+  <!-- Settings page -->
+  <div class="page" id="page-settings">
+    <div class="topbar">
+      <span class="topbar-title">Settings</span>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-section-title">Monitoring</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Check interval</div>
+              <div class="settings-desc">How often to check if a stream is live</div>
+            </div>
+            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
+              <input class="settings-input" type="number" id="s-interval" min="10" max="3600" value="60">
+              <span style="font-size:12px;color:var(--sub)">sec</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Auto-record when live</div>
+              <div class="settings-desc">Start recording automatically when a stream goes live</div>
+            </div>
+            <button class="sm-toggle off" id="s-record-on-add" onclick="toggleSetting(this)"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Recording Defaults</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Default quality</div>
+              <div class="settings-desc">Applied to new channels unless overridden</div>
+            </div>
+            <select class="settings-select" id="s-quality">
+              <option value="best">Best</option>
+              <option value="bestvideo+bestaudio">Best (split)</option>
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+              <option value="480p">480p</option>
+              <option value="worst">Lowest</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Default format</div>
+              <div class="settings-desc">Container for recorded files</div>
+            </div>
+            <select class="settings-select" id="s-format">
+              <option value="mp4">MP4</option>
+              <option value="mkv">MKV</option>
+              <option value="ts">TS</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Post-Processing</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Auto-convert to MP4</div>
+              <div class="settings-desc">Re-mux completed recordings to MP4 using ffmpeg (stream copy, lossless)</div>
+            </div>
+            <button class="sm-toggle off" id="s-auto-convert" onclick="toggleSetting(this)"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Delete original after convert</div>
+              <div class="settings-desc">Remove source file after successful MP4 conversion</div>
+            </div>
+            <button class="sm-toggle off" id="s-delete-original" onclick="toggleSetting(this)"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Auto-Retry</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Auto-retry on disconnect</div>
+              <div class="settings-desc">Automatically reconnect when a stream drops unexpectedly</div>
+            </div>
+            <button class="sm-toggle" id="s-auto-retry" onclick="toggleSetting(this)"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Max retries</div>
+              <div class="settings-desc">Maximum reconnect attempts before giving up</div>
+            </div>
+            <div class="settings-control"><input class="settings-input" type="number" id="s-max-retries" min="1" max="50" value="5"></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Retry delay</div>
+              <div class="settings-desc">Seconds to wait before reconnecting</div>
+            </div>
+            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
+              <input class="settings-input" type="number" id="s-retry-delay" min="5" max="300" value="15">
+              <span style="font-size:12px;color:var(--sub)">sec</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Import / Export</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Export configuration</div>
+              <div class="settings-desc">Download all channels and settings as a JSON file</div>
+            </div>
+            <button class="btn-cancel" onclick="exportConfig()" style="height:30px;font-size:12px">Export</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">Import configuration</div>
+              <div class="settings-desc">Load channels and settings from a JSON file (merges by default)</div>
+            </div>
+            <label class="btn-cancel" style="height:30px;font-size:12px;display:flex;align-items:center;cursor:pointer">
+              Import
+              <input type="file" accept=".json" style="display:none" onchange="importConfig(this)">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn-cancel" onclick="loadSettings()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recordings page -->
+  <div class="page" id="page-recordings">
+    <div class="topbar">
+      <span class="topbar-title">Recordings</span>
+      <span class="topbar-sub" id="rec-count">0 recordings</span>
+      <div class="topbar-right">
+        <div class="disk-indicator" id="diskIndicator">
+          <div class="disk-bar"><div class="disk-fill" id="diskFill"></div></div>
+          <span class="disk-text" id="diskText">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="grid-area">
+      <div id="recList" class="rec-list"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Add Channel modal -->
+<div class="overlay" id="addOverlay" onclick="overlayClick(event,'addOverlay')">
+  <div class="modal">
+    <div class="modal-title">Add Channel</div>
+    <div class="field">
+      <div class="field-lbl">Stream URL</div>
+      <input class="field-input" id="addUrl" type="text" placeholder="https://twitch.tv/channel · youtube.com/live/…" oninput="detectPlatform()" onkeydown="if(event.key==='Enter')confirmAdd()">
+      <div class="platform-detect" id="addPlatformDetect"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <div class="field-lbl">Quality</div>
+        <select class="field-input" id="addQuality">
+          <option value="">Global default</option>
+          <option value="best">Best</option>
+          <option value="bestvideo+bestaudio">Best (split)</option>
+          <option value="1080p">1080p</option>
+          <option value="720p">720p</option>
+          <option value="480p">480p</option>
+          <option value="worst">Lowest</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-lbl">Format</div>
+        <select class="field-input" id="addFormat">
+          <option value="">Global default</option>
+          <option value="mp4">MP4</option>
+          <option value="mkv">MKV</option>
+          <option value="ts">TS</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-section">Options</div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Monitor for live</div><div class="toggle-desc">Auto-start recording when stream goes live</div></div>
+      <button class="sm-toggle" id="addMonitoring" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Record now</div><div class="toggle-desc">Start recording immediately</div></div>
+      <button class="sm-toggle off" id="addRecordNow" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Override global setting for this channel</div></div>
+      <button class="sm-toggle off" id="addAutoConvert" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row" style="border-bottom:none">
+      <div class="toggle-info"><div class="toggle-title">Delete original</div><div class="toggle-desc">Remove source after MP4 conversion</div></div>
+      <button class="sm-toggle off" id="addDeleteOrig" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-primary" id="addConfirmBtn" onclick="confirmAdd()">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><circle cx="12" cy="12" r="5"/></svg>
+        Add Channel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Per-channel settings modal -->
+<div class="overlay" id="chSettingsOverlay" onclick="overlayClick(event,'chSettingsOverlay')">
+  <div class="modal wide">
+    <div class="modal-title" id="chSettingsTitle">Channel Settings</div>
+    <input type="hidden" id="chSettingsId">
+
+    <div class="field-row">
+      <div class="field">
+        <div class="field-lbl">Quality override</div>
+        <select class="field-input" id="chQuality">
+          <option value="">Global default</option>
+          <option value="best">Best</option>
+          <option value="bestvideo+bestaudio">Best (split)</option>
+          <option value="1080p">1080p</option>
+          <option value="720p">720p</option>
+          <option value="480p">480p</option>
+          <option value="worst">Lowest</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-lbl">Format override</div>
+        <select class="field-input" id="chFormat">
+          <option value="">Global default</option>
+          <option value="mp4">MP4</option>
+          <option value="mkv">MKV</option>
+          <option value="ts">TS</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-section">Per-channel overrides</div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Monitor for live</div><div class="toggle-desc">Auto-start recording when this stream goes live</div></div>
+      <button class="sm-toggle" id="chMonitoring" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Re-mux this channel's recordings to MP4 (stream copy)</div></div>
+      <button class="sm-toggle off" id="chAutoConvert" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row" style="border-bottom:none">
+      <div class="toggle-info"><div class="toggle-title">Delete original after convert</div><div class="toggle-desc">Remove source file after successful conversion</div></div>
+      <button class="sm-toggle off" id="chDeleteOrig" onclick="toggleSetting(this)"></button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="deleteChannel(document.getElementById('chSettingsId').value); closeChSettings();">Remove Channel</button>
+      <button class="btn-cancel" onclick="closeChSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveChSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log drawer -->
+<div class="log-drawer" id="logDrawer">
+  <div class="log-hdr">
+    <span class="log-title-txt" id="logTitle">LOG</span>
+    <button class="log-close" onclick="closeLog()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<!-- Video preview -->
+<div class="preview-overlay" id="previewOverlay" onclick="if(event.target===this)closePreview()">
+  <button class="preview-close" onclick="closePreview()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <video class="preview-video" id="previewVideo" controls></video>
+  <div class="preview-title" id="previewTitle"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '';
+let channels = {};
+let globalSettings = {};
+let activeLogChId = null;
+let selectMode = false;
+let selectedIds = new Set();
+let dragSrcId = null;
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'settings') loadSettings();
+  if (page === 'recordings') { fetchRecordings(); fetchDisk(); }
+}
+
+// ── Platform detection ────────────────────────────────────────────────────────
+const PLAT_RE = [
+  [/youtube\.com|youtu\.be/i, 'YouTube', '🔴'],
+  [/twitch\.tv/i,             'Twitch',  '🟣'],
+  [/tiktok\.com/i,            'TikTok',  '⚫'],
+  [/kick\.com/i,              'Kick',    '🟢'],
+  [/bilibili\.com/i,          'Bilibili','🔵'],
+  [/douyin\.com/i,            'Douyin',  '⚫'],
+  [/huya\.com/i,              'Huya',    '🟠'],
+  [/douyu\.com/i,             'Douyu',   '🟠'],
+  [/afreecatv\.com/i,         'Afreeca', '🔵'],
+  [/sooplive\.co/i,           'Sooplive','🔵'],
+  [/naver\.com/i,             'Naver',   '🟢'],
+  [/nicovideo\.jp/i,          'Niconico','⚪'],
+  [/facebook\.com|fb\.watch/i,'Facebook','🔵'],
+  [/instagram\.com/i,         'Instagram','🟣'],
+  [/twitter\.com|x\.com/i,    'Twitter/X','⚫'],
+  [/vimeo\.com/i,             'Vimeo',   '🔵'],
+  [/rumble\.com/i,            'Rumble',  '🟢'],
+  [/stripchat\.com/i,         'Stripchat','🟣'],
+  [/twitcasting\.tv/i,        'Twitcasting','🔵'],
+  [/bigo\.tv/i,               'Bigo',    '🟣'],
+];
+
+function detectPlatform() {
+  const val = document.getElementById('addUrl').value.trim();
+  const el  = document.getElementById('addPlatformDetect');
+  if (!val) { el.innerHTML = ''; return; }
+  const m = PLAT_RE.find(([re]) => re.test(val));
+  if (m) {
+    el.innerHTML = `<span class="detect-badge">${m[1]}</span> detected`;
+  } else if (val.startsWith('http')) {
+    el.innerHTML = '<span style="color:var(--amber)">⚠ unknown — yt-dlp will attempt</span>';
+  } else { el.innerHTML = ''; }
+}
+
+function platClass(plat) {
+  const p = (plat || '').toLowerCase();
+  if (p.includes('twitch'))   return 'plat-twitch';
+  if (p.includes('youtube'))  return 'plat-youtube';
+  if (p.includes('tiktok'))   return 'plat-tiktok';
+  if (p.includes('kick'))     return 'plat-kick';
+  if (p.includes('bilibili')) return 'plat-bilibili';
+  return 'plat-default';
+}
+
+function platEmoji(plat) {
+  const p = (plat || '').toLowerCase();
+  if (p.includes('twitch'))    return '🎮';
+  if (p.includes('youtube'))   return '▶';
+  if (p.includes('tiktok'))    return '♪';
+  if (p.includes('kick'))      return '⚡';
+  if (p.includes('bilibili'))  return 'B';
+  if (p.includes('naver'))     return 'N';
+  return '●';
+}
+
+// ── Add modal ─────────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('addOverlay').classList.add('open');
+  // Pre-check "Record now" if global setting is on
+  const recNow = document.getElementById('addRecordNow');
+  if (globalSettings.record_on_add) { recNow.classList.remove('off'); }
+  else { recNow.classList.add('off'); }
+  setTimeout(() => document.getElementById('addUrl').focus(), 80);
+}
+function closeAddModal() {
+  document.getElementById('addOverlay').classList.remove('open');
+  document.getElementById('addUrl').value = '';
+  document.getElementById('addPlatformDetect').innerHTML = '';
+}
+function overlayClick(e, id) {
+  if (e.target === document.getElementById(id)) {
+    document.getElementById(id).classList.remove('open');
+  }
+}
+
+async function confirmAdd() {
+  const url = document.getElementById('addUrl').value.trim();
+  if (!url) return;
+  const btn = document.getElementById('addConfirmBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/channels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        quality:          document.getElementById('addQuality').value,
+        format:           document.getElementById('addFormat').value,
+        monitoring:       !document.getElementById('addMonitoring').classList.contains('off'),
+        record_now:       !document.getElementById('addRecordNow').classList.contains('off'),
+        auto_convert_mp4: !document.getElementById('addAutoConvert').classList.contains('off'),
+        delete_original:  !document.getElementById('addDeleteOrig').classList.contains('off'),
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    toast(`Channel added · ${data.platform}`);
+    closeAddModal();
+    fetchChannels();
+  } catch(e) {
+    toast('Error: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Per-channel settings modal ────────────────────────────────────────────────
+function openChSettings(chId) {
+  const ch = channels[chId];
+  if (!ch) return;
+  document.getElementById('chSettingsId').value = chId;
+  document.getElementById('chSettingsTitle').textContent = ch.display_name || ch.platform || 'Channel Settings';
+  document.getElementById('chQuality').value = ch.quality || '';
+  document.getElementById('chFormat').value  = ch.format  || '';
+  setToggle('chMonitoring',  ch.monitoring !== false);
+  setToggle('chAutoConvert', !!ch.auto_convert_mp4);
+  setToggle('chDeleteOrig',  !!ch.delete_original);
+  document.getElementById('chSettingsOverlay').classList.add('open');
+}
+function closeChSettings() {
+  document.getElementById('chSettingsOverlay').classList.remove('open');
+}
+async function saveChSettings() {
+  const chId = document.getElementById('chSettingsId').value;
+  const body = {
+    quality:          document.getElementById('chQuality').value || null,
+    format:           document.getElementById('chFormat').value  || null,
+    monitoring:       !document.getElementById('chMonitoring').classList.contains('off'),
+    auto_convert_mp4: !document.getElementById('chAutoConvert').classList.contains('off'),
+    delete_original:  !document.getElementById('chDeleteOrig').classList.contains('off'),
+  };
+  // remove nulls
+  Object.keys(body).forEach(k => body[k] === null && delete body[k]);
+  try {
+    await fetch(`${API}/api/channels/${chId}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    toast('Settings saved');
+    closeChSettings();
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// ── Toggle helpers ─────────────────────────────────────────────────────────────
+function toggleSetting(btn) { btn.classList.toggle('off'); }
+function setToggle(id, on) {
+  const el = document.getElementById(id);
+  if (on) el.classList.remove('off'); else el.classList.add('off');
+}
+
+// ── Channel actions ──────────────────────────────────────────────────────────
+async function recordChannel(chId) {
+  try {
+    const res = await fetch(`${API}/api/channels/${chId}/record`, { method: 'POST' });
+    if (!res.ok) throw new Error(await res.text());
+    toast('Recording started');
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function stopChannel(chId) {
+  try {
+    await fetch(`${API}/api/channels/${chId}/stop`, { method: 'POST' });
+    toast('Stopping…');
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function killChannel(chId) {
+  if (!confirm('Force kill this recording? This may corrupt the file.')) return;
+  try {
+    await fetch(`${API}/api/channels/${chId}/kill`, { method: 'POST' });
+    toast('Recording killed');
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function deleteChannel(chId) {
+  try {
+    await fetch(`${API}/api/channels/${chId}`, { method: 'DELETE' });
+    delete channels[chId];
+    renderChannels();
+    toast('Channel removed');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function refreshChannel(chId) {
+  toast('Refreshing metadata…');
+  try {
+    await fetch(`${API}/api/channels/${chId}/refresh`, { method: 'POST' });
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function toggleMonitoring(chId) {
+  const ch = channels[chId];
+  if (!ch) return;
+  const newVal = !ch.monitoring;
+  try {
+    await fetch(`${API}/api/channels/${chId}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ monitoring: newVal })
+    });
+    fetchChannels();
+  } catch(e) {}
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function openLog(chId) {
+  activeLogChId = chId;
+  const ch = channels[chId];
+  document.getElementById('logTitle').textContent =
+    `LOG · ${(ch?.display_name || ch?.platform || chId).toUpperCase()}`;
+  document.getElementById('logDrawer').classList.add('open');
+  refreshLog();
+}
+function closeLog() {
+  document.getElementById('logDrawer').classList.remove('open');
+  activeLogChId = null;
+}
+async function refreshLog() {
+  if (!activeLogChId) return;
+  const ch = channels[activeLogChId];
+  const recId = ch?.rec_id;
+  if (!recId) {
+    document.getElementById('logBody').innerHTML = '<div class="log-line" style="color:var(--muted)">No active recording for this channel.</div>';
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/api/recordings/${recId}/log`);
+    const data = await res.json();
+    const body = document.getElementById('logBody');
+    const lines = data.log || [];
+    body.innerHTML = lines.length
+      ? lines.map(l => `<div class="log-line${l.toLowerCase().includes('error')?' err':''}">${esc(l)}</div>`).join('')
+      : '<div class="log-line" style="color:var(--muted)">No output yet…</div>';
+    body.scrollTop = body.scrollHeight;
+  } catch {}
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fmtBytes(b) {
+  if (!b) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1024**2) return (b/1024).toFixed(1) + ' KiB';
+  if (b < 1024**3) return (b/1024**2).toFixed(1) + ' MiB';
+  return (b/1024**3).toFixed(2) + ' GiB';
+}
+function fmtDur(start) {
+  if (!start) return '—';
+  const s = Math.floor(Date.now()/1000 - start);
+  if (s < 0) return '00:00:00';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function timeAgo(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor(Date.now()/1000 - ts);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  return Math.floor(s/3600) + 'h ago';
+}
+
+function renderCard(ch) {
+  const isRecording = ch.rec_status === 'recording' || ch.rec_status === 'starting';
+  const monitoring  = ch.monitoring !== false;
+  const initials    = (ch.display_name || ch.platform || '?').charAt(0).toUpperCase();
+  const name        = ch.display_name || ch.platform || 'Unknown';
+  const username    = ch.username ? '@' + ch.username : '';
+  const pc          = platClass(ch.platform);
+  const pe          = platEmoji(ch.platform);
+
+  const pfpHtml = ch.avatar
+    ? `<img class="pfp" src="${esc(ch.avatar)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const fallbackHtml = `<div class="pfp-fallback" style="${ch.avatar ? 'display:none' : ''}">${esc(initials)}</div>`;
+
+  const thumbHtml = ch.thumbnail
+    ? `<img class="thumb-img loaded" src="${esc(ch.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : '';
+
+  return `
+  <div class="ch-card ${ch.is_live || isRecording ? 'is-live' : ''} ${selectedIds.has(ch.id) ? 'selected' : ''}"
+       id="card-${ch.id}" draggable="true"
+       ondragstart="onDragStart(event,'${ch.id}')" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)"
+       ondrop="onDrop(event,'${ch.id}')" ondragend="onDragEnd(event)"
+       onclick="onCardClick(event,'${ch.id}')">
+    <div class="card-thumb">
+      <div class="select-checkbox"></div>
+      <div class="thumb-fallback"></div>
+      ${thumbHtml}
+      ${isRecording
+        ? `<div class="live-badge"><span class="live-dot"></span>REC</div>`
+        : ch.is_live
+          ? `<div class="live-badge" style="background:rgba(239,68,68,0.85)"><span class="live-dot"></span>LIVE</div>`
+          : ch.rec_status === 'error'
+            ? `<div class="live-badge" style="background:rgba(239,68,68,0.7)">ERROR</div>`
+            : monitoring
+              ? `<div class="checking-badge"><span class="checking-dot"></span>MONITORING</div>`
+              : `<div class="monitoring-off-badge">OFF</div>`
+      }
+    </div>
+    <div class="card-body">
+      <div class="streamer-row">
+        <div class="pfp-wrap">
+          ${pfpHtml}${fallbackHtml}
+          <div class="plat-pip ${pc}" title="${esc(ch.platform)}">${esc(pe)}</div>
+        </div>
+        <div class="streamer-meta">
+          <div class="streamer-name">${esc(name)}</div>
+          ${username ? `<div class="streamer-username">${esc(username)}</div>` : `<div class="streamer-plat">${esc(ch.platform)}</div>`}
+        </div>
+      </div>
+
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+            Duration
+          </div>
+          <div class="stat-val dur ${isRecording ? '' : 'dim'}">${isRecording ? fmtDur(ch.rec_started) : '—'}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Speed
+          </div>
+          <div class="stat-val ${ch.rec_speed ? '' : 'dim'}">${esc(ch.rec_speed || '—')}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Size
+          </div>
+          <div class="stat-val ${ch.rec_bytes ? '' : 'dim'}">${fmtBytes(ch.rec_bytes)}</div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="pill ${monitoring ? 'monitoring' : 'pill-off'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ${monitoring ? 'Monitoring' : 'Off'}
+        </div>
+        ${ch.is_live || isRecording ? `
+        <div class="pill live">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
+          Live
+        </div>` : ''}
+        ${isRecording ? `
+        <div class="pill recording">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Recording
+        </div>` : ''}
+        <div class="pill" style="color:var(--muted);margin-left:auto;font-size:10px">${timeAgo(ch.last_checked)}</div>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <div class="toggle-area">
+        <button class="toggle ${monitoring ? '' : 'off'}" title="Toggle monitoring" onclick="toggleMonitoring('${ch.id}')"></button>
+        <span class="toggle-label">${monitoring ? 'Active' : 'Paused'}</span>
+      </div>
+      <button class="act-btn danger" title="Remove channel" onclick="deleteChannel('${ch.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </button>
+      <button class="act-btn" title="View log" onclick="openLog('${ch.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="9" y2="18"/></svg>
+      </button>
+      <button class="act-btn warn" title="Refresh metadata" onclick="refreshChannel('${ch.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button class="act-btn" title="Channel settings" onclick="openChSettings('${ch.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <div class="act-sep"></div>
+      ${isRecording
+        ? `<button class="act-btn danger" title="Stop recording" onclick="stopChannel('${ch.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+           </button>
+           <button class="act-btn danger" title="Force kill" onclick="killChannel('${ch.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+           </button>`
+        : `<button class="act-btn success" title="Record now" onclick="recordChannel('${ch.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+           </button>`
+      }
+    </div>
+  </div>`;
+}
+
+function renderChannels() {
+  const grid = document.getElementById('channelsGrid');
+  const list = Object.values(channels).sort((a,b) => {
+    const sa = a.sort_order ?? 9999, sb = b.sort_order ?? 9999;
+    if (sa !== sb) return sa - sb;
+    return b.created_at - a.created_at;
+  });
+  const liveCount = list.filter(c => c.is_live || c.rec_status === 'recording').length;
+
+  document.getElementById('channel-count').textContent =
+    list.length + ' channel' + (list.length !== 1 ? 's' : '') +
+    (liveCount ? ` · ${liveCount} live` : '');
+
+  const badge = document.getElementById('live-badge');
+  badge.style.display = liveCount > 0 ? '' : 'none';
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+      </svg>
+      <p>No channels yet</p>
+      <small>Click ADD to start monitoring a stream</small>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = list.map(renderCard).join('');
+  if (selectMode) grid.classList.add('select-mode'); else grid.classList.remove('select-mode');
+  updateBulkBar();
+}
+
+function filterCards() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.ch-card').forEach(card => {
+    const id = card.id.replace('card-', '');
+    const ch = channels[id];
+    if (!ch) return;
+    const match = (ch.url + ch.platform + ch.display_name + ch.username).toLowerCase().includes(q);
+    card.style.display = match ? '' : 'none';
+  });
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+async function fetchChannels() {
+  try {
+    const res = await fetch(`${API}/api/channels`);
+    const list = await res.json();
+    channels = {};
+    list.forEach(c => channels[c.id] = c);
+    renderChannels();
+  } catch {}
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const res = await fetch(`${API}/api/settings`);
+    const s = await res.json();
+    globalSettings = s;
+    document.getElementById('s-interval').value   = s.monitor_interval ?? 60;
+    document.getElementById('s-quality').value    = s.default_quality  ?? 'best';
+    document.getElementById('s-format').value     = s.default_format   ?? 'mp4';
+    setToggle('s-record-on-add',    !!s.record_on_add);
+    setToggle('s-auto-convert',     !!s.auto_convert_mp4);
+    setToggle('s-delete-original',  !!s.delete_original);
+    setToggle('s-auto-retry',       s.auto_retry !== false);
+    document.getElementById('s-max-retries').value = s.max_retries ?? 5;
+    document.getElementById('s-retry-delay').value = s.retry_delay ?? 15;
+  } catch {}
+}
+
+async function saveSettings() {
+  const body = {
+    monitor_interval: parseInt(document.getElementById('s-interval').value) || 60,
+    default_quality:  document.getElementById('s-quality').value,
+    default_format:   document.getElementById('s-format').value,
+    record_on_add:    !document.getElementById('s-record-on-add').classList.contains('off'),
+    auto_convert_mp4: !document.getElementById('s-auto-convert').classList.contains('off'),
+    delete_original:  !document.getElementById('s-delete-original').classList.contains('off'),
+    auto_retry:       !document.getElementById('s-auto-retry').classList.contains('off'),
+    max_retries:      parseInt(document.getElementById('s-max-retries').value) || 5,
+    retry_delay:      parseInt(document.getElementById('s-retry-delay').value) || 15,
+  };
+  try {
+    await fetch(`${API}/api/settings`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    toast('Settings saved');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// ── Recordings page ───────────────────────────────────────────────────────────
+async function fetchRecordings() {
+  try {
+    const res = await fetch(`${API}/api/recordings`);
+    const list = await res.json();
+    const el = document.getElementById('recList');
+    document.getElementById('rec-count').textContent =
+      list.length + ' recording' + (list.length !== 1 ? 's' : '');
+
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <p>No recordings yet</p>
+        <small>Recordings will appear here after you start recording a stream</small>
+      </div>`;
+      return;
+    }
+    el.innerHTML = list.map(r => {
+      const statusCls = r.status || 'completed';
+      const name = r.filename || r.id;
+      const ch = Object.values(channels).find(c => c.id === r.channel_id);
+      const plat = r.platform || ch?.platform || '';
+      const date = r.created_at ? new Date(r.created_at * 1000).toLocaleString() : '—';
+      const size = fmtBytes(r.bytes);
+      const dur = (r.started_at && r.ended_at)
+        ? fmtDurSec(r.ended_at - r.started_at)
+        : (r.started_at ? fmtDur(r.started_at) : '—');
+      const canDownload = r.filepath && statusCls === 'completed';
+      return `<div class="rec-row">
+        <div class="rec-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+          </svg>
+        </div>
+        <div class="rec-info">
+          <div class="rec-name" title="${esc(name)}">${esc(name)}</div>
+          <div class="rec-meta">
+            <span>${esc(plat)}</span>
+            <span>${date}</span>
+            <span>${size}</span>
+            <span>${dur}</span>
+          </div>
+        </div>
+        <span class="rec-status ${statusCls}">${statusCls.toUpperCase()}</span>
+        <div class="rec-actions">
+          ${canDownload ? `<button class="act-btn" title="Preview" onclick="openPreview('${r.id}','${esc(name)}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </button>` : ''}
+          ${canDownload ? `<a class="act-btn" title="Download" href="${API}/api/download/${r.id}" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </a>` : ''}
+          <button class="act-btn danger" title="Delete recording" onclick="deleteRecording('${r.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+function fmtDurSec(s) {
+  if (!s || s < 0) return '—';
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+
+async function deleteRecording(recId) {
+  if (!confirm('Delete this recording and its file?')) return;
+  try {
+    await fetch(`${API}/api/recordings/${recId}`, { method: 'DELETE' });
+    toast('Recording deleted');
+    fetchRecordings();
+    fetchDisk();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// ── Disk usage ────────────────────────────────────────────────────────────────
+async function fetchDisk() {
+  try {
+    const res = await fetch(`${API}/api/disk`);
+    const d = await res.json();
+    const pct = d.total > 0 ? Math.round((d.used / d.total) * 100) : 0;
+    const fill = document.getElementById('diskFill');
+    fill.style.width = pct + '%';
+    fill.className = 'disk-fill' + (pct > 90 ? ' danger' : pct > 75 ? ' warn' : '');
+    document.getElementById('diskText').textContent =
+      `${fmtBytes(d.recordings_bytes)} used · ${fmtBytes(d.free)} free`;
+  } catch {}
+}
+
+// ── Import / Export ───────────────────────────────────────────────────────────
+async function exportConfig() {
+  try {
+    const res = await fetch(`${API}/api/export`);
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'streamrec-config.json'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Config exported');
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+async function importConfig(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const res = await fetch(`${API}/api/import`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ channels: data.channels || {}, settings: data.settings || {}, merge: true })
+    });
+    const result = await res.json();
+    toast(`Imported ${result.imported_channels} channel(s)`);
+    fetchChannels();
+    loadSettings();
+  } catch(e) { toast('Import failed: ' + e.message, true); }
+  input.value = '';
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  const icon = document.getElementById('theme-icon');
+  icon.innerHTML = isLight
+    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+}
+(function initTheme() {
+  if (localStorage.getItem('theme') === 'light') {
+    document.documentElement.classList.add('light');
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+})();
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
+function onDragStart(e, chId) {
+  if (selectMode) { e.preventDefault(); return; }
+  dragSrcId = chId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.target.classList.add('dragging');
+}
+function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDragEnd(e) {
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+function onDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragSrcId || dragSrcId === targetId) return;
+  // Build current order
+  const grid = document.getElementById('channelsGrid');
+  const cards = [...grid.querySelectorAll('.ch-card')];
+  const order = cards.map(c => c.id.replace('card-', ''));
+  const srcIdx = order.indexOf(dragSrcId);
+  const tgtIdx = order.indexOf(targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  order.splice(srcIdx, 1);
+  order.splice(tgtIdx, 0, dragSrcId);
+  // Update local sort_order
+  order.forEach((id, i) => { if (channels[id]) channels[id].sort_order = i; });
+  renderChannels();
+  // Save to backend
+  fetch(`${API}/api/channels/reorder`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ order })
+  }).catch(() => {});
+  dragSrcId = null;
+}
+
+// ── Multi-select ──────────────────────────────────────────────────────────────
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  selectedIds.clear();
+  const btn = document.getElementById('selectModeBtn');
+  btn.style.borderColor = selectMode ? 'var(--blue)' : '';
+  btn.style.color = selectMode ? 'var(--blue)' : '';
+  renderChannels();
+}
+function exitSelectMode() {
+  selectMode = false; selectedIds.clear();
+  const btn = document.getElementById('selectModeBtn');
+  btn.style.borderColor = ''; btn.style.color = '';
+  renderChannels();
+}
+function onCardClick(e, chId) {
+  if (!selectMode) return;
+  // Don't interfere with button clicks
+  if (e.target.closest('.act-btn, .toggle, button, a')) return;
+  e.preventDefault();
+  if (selectedIds.has(chId)) selectedIds.delete(chId); else selectedIds.add(chId);
+  const card = document.getElementById('card-' + chId);
+  if (card) card.classList.toggle('selected', selectedIds.has(chId));
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  if (selectMode && selectedIds.size > 0) {
+    bar.classList.add('show');
+    document.getElementById('bulkCount').textContent = selectedIds.size + ' selected';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+async function bulkAction(action) {
+  if (!selectedIds.size) return;
+  if (action === 'delete' && !confirm(`Delete ${selectedIds.size} channel(s)?`)) return;
+  try {
+    const res = await fetch(`${API}/api/channels/bulk`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ids: [...selectedIds], action })
+    });
+    const data = await res.json();
+    const ok = data.results.filter(r => r.ok).length;
+    toast(`${action}: ${ok}/${selectedIds.size} succeeded`);
+    exitSelectMode();
+    fetchChannels();
+  } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// ── Video preview ─────────────────────────────────────────────────────────────
+function openPreview(recId, name) {
+  const video = document.getElementById('previewVideo');
+  video.src = `${API}/api/preview/${recId}`;
+  document.getElementById('previewTitle').textContent = name;
+  document.getElementById('previewOverlay').classList.add('open');
+  video.play().catch(() => {});
+}
+function closePreview() {
+  const video = document.getElementById('previewVideo');
+  video.pause();
+  video.src = '';
+  document.getElementById('previewOverlay').classList.remove('open');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastT;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = err ? 'rgba(239,68,68,0.5)' : 'var(--border)';
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Poll ──────────────────────────────────────────────────────────────────────
+fetchChannels();
+loadSettings();
+setInterval(() => {
+  fetchChannels();
+  if (activeLogChId) refreshLog();
+}, 5000);
+
+// Tick recording durations every second without a full fetch
+setInterval(() => {
+  document.querySelectorAll('.ch-card').forEach(card => {
+    const id = card.id.replace('card-', '');
+    const ch = channels[id];
+    if (!ch) return;
+    const isRec = ch.rec_status === 'recording' || ch.rec_status === 'starting';
+    if (isRec && ch.rec_started) {
+      const durEl = card.querySelector('.stat-val.dur');
+      if (durEl) durEl.textContent = fmtDur(ch.rec_started);
+    }
+  });
+  updateTabTitle();
+}, 1000);
+
+function updateTabTitle() {
+  const list = Object.values(channels);
+  const recCount = list.filter(c => c.rec_status === 'recording').length;
+  const liveCount = list.filter(c => c.is_live && c.rec_status !== 'recording').length;
+  let parts = [];
+  if (recCount) parts.push(`${recCount} recording`);
+  if (liveCount) parts.push(`${liveCount} live`);
+  document.title = parts.length ? `(${parts.join(' · ')}) StreamRec` : 'StreamRec';
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+    closeLog();
+    closePreview();
+    if (selectMode) exitSelectMode();
+  }
+});
+</script>
+</body>
+</html>
