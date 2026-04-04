@@ -1,0 +1,13 @@
+services:
+  streamrec:
+    build: .  # This tells Docker to look for the Dockerfile in the current folder
+    container_name: streamrec
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - recordings:/recordings
+
+volumes:
+  recordings:
+    driver: local
