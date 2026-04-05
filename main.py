@@ -256,7 +256,8 @@ async def run_recording(rec_id: str):
     output_path = rec_dir / f"{filename_stem}.%(ext)s"
 
     cmd = ["yt-dlp", "--no-part"]
-    if platform not in ("tiktok", "kick", "stripchat", "bigo", "pandalive"):
+    record_from_start = ch.get("record_from_start", True)
+    if record_from_start and platform not in ("tiktok", "kick", "stripchat", "bigo", "pandalive"):
         cmd += ["--live-from-start", "--hls-use-mpegts"]
     cmd += [
         "--retries", "infinite", "--fragment-retries", "infinite",
@@ -462,6 +463,7 @@ class AddChannelRequest(BaseModel):
     auto_convert_mp4: bool = False
     delete_original: bool = False
     record_now: bool = False
+    record_from_start: bool = True
 
 class UpdateChannelRequest(BaseModel):
     monitoring: Optional[bool] = None
@@ -469,6 +471,7 @@ class UpdateChannelRequest(BaseModel):
     format: Optional[str] = None
     auto_convert_mp4: Optional[bool] = None
     delete_original: Optional[bool] = None
+    record_from_start: Optional[bool] = None
 
 class UpdateSettingsRequest(BaseModel):
     monitor_interval: Optional[int] = None
@@ -492,6 +495,7 @@ async def add_channel(req: AddChannelRequest):
         "monitoring": req.monitoring,
         "auto_convert_mp4": req.auto_convert_mp4,
         "delete_original": req.delete_original,
+        "record_from_start": req.record_from_start,
         "created_at": time.time(),
         "display_name": "", "username": "", "avatar": "", "thumbnail": "",
         "is_live": False, "last_checked": None, "recording_id": None,

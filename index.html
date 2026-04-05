@@ -764,6 +764,10 @@ html.light .plat-tiktok { background: #333; }
       <button class="sm-toggle off" id="addRecordNow" onclick="toggleSetting(this)"></button>
     </div>
     <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Record from beginning</div><div class="toggle-desc">Capture the entire stream from its start instead of only from the current moment</div></div>
+      <button class="sm-toggle" id="addRecordFromStart" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row">
       <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Override global setting for this channel</div></div>
       <button class="sm-toggle off" id="addAutoConvert" onclick="toggleSetting(this)"></button>
     </div>
@@ -819,6 +823,10 @@ html.light .plat-tiktok { background: #333; }
     <div class="toggle-row">
       <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Re-mux this channel's recordings to MP4 (stream copy)</div></div>
       <button class="sm-toggle off" id="chAutoConvert" onclick="toggleSetting(this)"></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-title">Record from beginning</div><div class="toggle-desc">Capture the entire stream from its start instead of only from the current moment</div></div>
+      <button class="sm-toggle" id="chRecordFromStart" onclick="toggleSetting(this)"></button>
     </div>
     <div class="toggle-row" style="border-bottom:none">
       <div class="toggle-info"><div class="toggle-title">Delete original after convert</div><div class="toggle-desc">Remove source file after successful conversion</div></div>
@@ -964,6 +972,7 @@ async function confirmAdd() {
         format:           document.getElementById('addFormat').value,
         monitoring:       !document.getElementById('addMonitoring').classList.contains('off'),
         record_now:       !document.getElementById('addRecordNow').classList.contains('off'),
+        record_from_start: !document.getElementById('addRecordFromStart').classList.contains('off'),
         auto_convert_mp4: !document.getElementById('addAutoConvert').classList.contains('off'),
         delete_original:  !document.getElementById('addDeleteOrig').classList.contains('off'),
       })
@@ -991,6 +1000,7 @@ function openChSettings(chId) {
   setToggle('chMonitoring',  ch.monitoring !== false);
   setToggle('chAutoConvert', !!ch.auto_convert_mp4);
   setToggle('chDeleteOrig',  !!ch.delete_original);
+  setToggle('chRecordFromStart', ch.record_from_start !== false);
   document.getElementById('chSettingsOverlay').classList.add('open');
 }
 function closeChSettings() {
@@ -1004,6 +1014,7 @@ async function saveChSettings() {
     monitoring:       !document.getElementById('chMonitoring').classList.contains('off'),
     auto_convert_mp4: !document.getElementById('chAutoConvert').classList.contains('off'),
     delete_original:  !document.getElementById('chDeleteOrig').classList.contains('off'),
+    record_from_start: !document.getElementById('chRecordFromStart').classList.contains('off'),
   };
   // remove nulls
   Object.keys(body).forEach(k => body[k] === null && delete body[k]);
