@@ -1006,7 +1006,7 @@ html.light .plat-tiktok { background: #333; }
   <button class="preview-close" onclick="closePreview()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
-  <video class="preview-video" id="previewVideo" controls></video>
+  <video class="preview-video" id="previewVideo" controls preload="auto"></video>
   <div class="preview-title" id="previewTitle"></div>
 </div>
 
@@ -1318,7 +1318,7 @@ async function refreshLog() {
 // ── Debounce helper ───────────────────────────────────────────────────────────
 function debounce(fn, ms) {
   let t;
-  return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
+  return function(...args) { const self = this; clearTimeout(t); t = setTimeout(() => fn.apply(self, args), ms); };
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -1989,7 +1989,7 @@ initPolling();
 setInterval(() => {
   fetchChannels();
   if (activeLogChId) refreshLog();
-}, _pollInterval > 5000 ? _pollInterval : 5000);
+}, _pollInterval);
 
 // Tick recording durations every second without a full fetch
 setInterval(() => {

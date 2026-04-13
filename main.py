@@ -91,14 +91,14 @@ def _schedule_save_state():
     _save_state_pending = True
     if _save_state_task and not _save_state_task.done():
         return  # already scheduled
-    _save_state_task = asyncio.get_event_loop().create_task(_debounced_save())
+    _save_state_task = asyncio.get_running_loop().create_task(_debounced_save())
 
 async def _debounced_save():
     global _save_state_pending
-    await asyncio.sleep(2)  # wait 2s for more writes to coalesce
-    if _save_state_pending:
+    while _save_state_pending:
         _save_state_pending = False
-        _save_state_sync()
+        await asyncio.sleep(2)  # wait 2s for more writes to coalesce
+    _save_state_sync()
 
 settings: dict = {
     "monitor_interval": 120 if PI_MODE else 60,
@@ -688,9 +688,11 @@ async def run_recording(rec_id: str):
             except Exception:
                 pass
 
-        # Remux on stop to fix truncated containers
+        # Remux to fix containers and move moov atom to file start for
+        # smooth playback (faststart).  Run on ALL completed recordings —
+        # not just manual stops — so files play without lag on any device.
         fp = rec.get("filepath", "")
-        if fp and Path(fp).exists() and rec.get("stopping"):
+        if fp and Path(fp).exists():
             suffix    = Path(fp).suffix
             fixed_path = str(Path(fp).with_name(Path(fp).stem + "_fixed" + suffix))
             try:
@@ -700,7 +702,7 @@ async def run_recording(rec_id: str):
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,
                 )
-                await asyncio.wait_for(fix_proc.wait(), timeout=120)
+                await asyncio.wait_for(fix_proc.wait(), timeout=300)
                 if fix_proc.returncode == 0 and Path(fixed_path).exists():
                     Path(fp).unlink(missing_ok=True)
                     Path(fixed_path).rename(fp)
@@ -724,7 +726,9 @@ async def run_recording(rec_id: str):
             mp4_path = str(Path(fp).with_suffix(".mp4"))
             try:
                 conv = await asyncio.create_subprocess_exec(
-                    "ffmpeg", "-i", fp, "-c", "copy", "-threads", ffmpeg_threads,
+                    "ffmpeg", "-i", fp, "-c", "copy",
+                    "-movflags", "+faststart",
+                    "-threads", ffmpeg_threads,
                     mp4_path, "-y",
                     stdout=asyncio.subprocess.DEVNULL,
                     stderr=asyncio.subprocess.DEVNULL,
@@ -1130,10 +1134,16 @@ async def preview_recording(rec_id: str, request: Request):
         "video/x-matroska" if suffix == ".mkv" else
         "video/mp2t"
     )
+
+    # Larger range responses (10 MB) and read chunks (512 KB) reduce HTTP
+    # round-trips and I/O syscalls — critical on Raspberry Pi / slow SD cards.
+    range_chunk  = 10 * 1024 * 1024   # 10 MB per range response
+    read_chunk   = 512 * 1024         # 512 KB per read()
+
     range_header = request.headers.get("range")
     if range_header:
         start = int(range_header.replace("bytes=", "").split("-")[0])
-        end   = min(start + 2 * 1024 * 1024, file_size - 1)
+        end   = min(start + range_chunk, file_size - 1)
         length = end - start + 1
 
         def iterfile():
@@ -1141,7 +1151,7 @@ async def preview_recording(rec_id: str, request: Request):
                 f.seek(start)
                 remaining = length
                 while remaining > 0:
-                    chunk = f.read(min(65536, remaining))
+                    chunk = f.read(min(read_chunk, remaining))
                     if not chunk:
                         break
                     remaining -= len(chunk)
@@ -1153,9 +1163,14 @@ async def preview_recording(rec_id: str, request: Request):
                 "Content-Range":  f"bytes {start}-{end}/{file_size}",
                 "Accept-Ranges":  "bytes",
                 "Content-Length": str(length),
+                "Cache-Control":  "private, max-age=3600",
+                "Connection":     "keep-alive",
             },
         )
-    return FileResponse(fp, media_type=content_type)
+    return FileResponse(fp, media_type=content_type, headers={
+        "Accept-Ranges": "bytes",
+        "Cache-Control":  "private, max-age=3600",
+    })
 
 
 # ── Settings endpoints ────────────────────────────────────────────────────────
