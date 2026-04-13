@@ -558,7 +558,7 @@ async def run_recording(rec_id: str):
     # Chaturbate (and similar HLS cam sites) have audio segments that start
     # exactly 1 second ahead of video — delay audio by 1s to compensate.
     if platform in _cam_platforms:
-        cmd += ["--postprocessor-args", "ffmpeg:-c:v copy -c:a copy -af adelay=1000|1000"]
+        cmd += ["--postprocessor-args", "ffmpeg:-c:v copy -c:a aac -af adelay=1000|1000"]
 
     # Proxy (channel > global)
     proxy = ch.get("proxy") or settings.get("proxy", "")
