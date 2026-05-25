@@ -63,6 +63,12 @@ _static_dir = os.environ.get("STATIC_DIR", str(Path(__file__).parent))
 VERSION = "1.0.0"
 START_TIME = time.time()
 
+# ── Login rate limiting ───────────────────────────────────────────────────────
+_login_attempts: dict[str, list[float]] = {}  # IP -> [timestamps]
+_LOGIN_MAX_ATTEMPTS = 10
+_LOGIN_WINDOW = 60  # seconds
+_LOGIN_COOLDOWN = 30  # seconds lockout
+
 # ── App ───────────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -247,6 +253,9 @@ def _save_state_sync():
     for cid, ch in channels.items():
         c = dict(ch)
         for k in ("recording_id", "is_live", "last_checked"):
+            c.pop(k, None)
+        # Strip sensitive credentials from disk-persisted state
+        for k in ("ch_password",):
             c.pop(k, None)
         saved_channels[cid] = c
     # Persist finished recordings (completed/error) so they survive restarts
@@ -656,12 +665,27 @@ async def run_recording(rec_id: str):
     if ch_pass:
         cmd += ["--password", ch_pass]
 
-    # Extra yt-dlp args (channel > global)
+    # Extra yt-dlp args (channel > global) — hardened against injection
     extra = ch.get("extra_args") or settings.get("extra_args", "")
     if extra:
         try:
-            # shlex.split is POSIX by default; on Windows use posix=False
-            cmd += shlex.split(extra, posix=not IS_WINDOWS)
+            parts = shlex.split(extra, posix=not IS_WINDOWS)
+            # Block dangerous yt-dlp flags that could execute arbitrary commands
+            _DANGEROUS_FLAGS = {
+                "--exec", "-X", "--config-location", "--print", "--print-to-file",
+                "--output-na-placeholder", "--downloader", "--external-downloader",
+                "--proxy",  # proxy is handled separately via --proxy on the cmd
+                "--cookies", "--cookies-from-browser",  # cookies handled separately
+                "--ffmpeg-location", "--prefer-ffmpeg",
+            }
+            for part in parts:
+                flag = part.split("=")[0] if "=" in part else part
+                if flag in _DANGEROUS_FLAGS:
+                    logger.warning("Blocked dangerous extra_args flag: %s", flag)
+                    raise ValueError(f"Blocked dangerous yt-dlp flag: {flag}")
+            cmd += parts
+        except ValueError:
+            raise  # re-raise our own validation errors
         except Exception:
             pass
 
@@ -1163,6 +1187,24 @@ async def add_channel(req: AddChannelRequest):
     parsed = urlparse(req.url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise HTTPException(400, "Invalid URL — must start with http:// or https://")
+    # Block private/internal IPs to prevent SSRF
+    _BLOCKED_HOSTS = (
+        "localhost", "127.0.0.1", "::1", "0.0.0.0",
+        "169.254.169.254",  # AWS metadata
+    )
+    hostname = parsed.hostname or ""
+    if hostname in _BLOCKED_HOSTS:
+        raise HTTPException(400, "URL rejected: private/internal host")
+    if hostname.startswith(("10.", "192.168.", "172.")) or hostname.startswith(("127.", "0.", "::")):
+        raise HTTPException(400, "URL rejected: private/internal host")
+    # Block bare IPs that are not in known-safe ranges
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise HTTPException(400, "URL rejected: private/internal IP address")
+    except ValueError:
+        pass  # hostname is a domain name, not an IP — allowed
     ch_id    = str(uuid.uuid4())[:8]
     platform = detect_platform(req.url)
     ch = {
@@ -1316,6 +1358,9 @@ async def delete_channel(ch_id: str):
     rec_id = ch.get("recording_id")
     if rec_id and rec_id in recordings:
         _stop_rec(recordings[rec_id], force=False)
+        # Brief wait for recording cleanup so the finally block in run_recording
+        # can still find the channel entry to clear recording_id
+        await asyncio.sleep(0.5)
     _save_state()
     logger.info("Channel deleted: %s", ch_id)
     return {"ok": True}
@@ -1686,18 +1731,53 @@ async def export_config():
 @app.post("/api/import")
 async def import_config(req: ImportRequest):
     imported = 0
+    # Known safe channel keys — reject anything else to prevent state corruption
+    _SAFE_CH_KEYS = {
+        "id", "url", "platform", "quality", "format", "monitoring",
+        "auto_convert_mp4", "delete_original", "proxy", "cookies_file",
+        "ch_username", "extra_args", "max_duration", "notes",
+        "created_at", "display_name", "username", "avatar", "thumbnail",
+        "stream_title", "sort_order",
+    }
     for cid, ch in req.channels.items():
         if req.merge and cid in channels:
             continue
+        # Sanitize: only keep known-safe keys
+        ch = {k: v for k, v in ch.items() if k in _SAFE_CH_KEYS}
         ch["recording_id"] = None
         ch["is_live"]      = False
         ch["last_checked"] = None
         ch.setdefault("id",         cid)
         ch.setdefault("created_at", time.time())
+        # Type-coerce numeric fields
+        try:
+            ch["max_duration"] = int(ch.get("max_duration", 0) or 0)
+        except (ValueError, TypeError):
+            ch["max_duration"] = 0
         channels[cid] = ch
         imported += 1
+    # Validate settings types before applying
+    _TYPE_MAP = {
+        "pi_mode": bool, "monitor_interval": (int, float),
+        "auto_record": bool, "default_quality": str, "default_format": str,
+        "auto_convert_mp4": bool, "delete_original": bool,
+        "auto_retry": bool, "max_retries": int, "retry_delay": (int, float),
+        "proxy": str, "extra_args": str, "cookies_file": str,
+        "retention_days": int, "max_duration": int,
+        "webhook_url": str, "auto_stop_stalled": bool,
+    }
     for k, v in req.settings.items():
         if k in settings:
+            expected = _TYPE_MAP.get(k)
+            if expected and not isinstance(v, expected):
+                logger.warning("Import: skipping %s (expected %s, got %s)", k, expected, type(v).__name__)
+                continue
+            # Clamp numeric values
+            if k in ("monitor_interval", "max_retries", "retry_delay", "retention_days", "max_duration"):
+                try:
+                    v = max(0, int(v) if k != "retry_delay" else float(v))
+                except (ValueError, TypeError):
+                    v = settings[k]  # keep default
             settings[k] = v
     _save_state()
     return {"ok": True, "imported_channels": imported}
@@ -1931,14 +2011,35 @@ async def delete_avatar():
     return {"ok": True}
 
 
+def _check_login_rate(client_ip: str) -> bool:
+    """Return True if the IP is rate-limited (too many failed attempts)."""
+    now = time.time()
+    attempts = _login_attempts.get(client_ip, [])
+    # Prune old attempts outside the window
+    attempts = [t for t in attempts if now - t < _LOGIN_WINDOW]
+    _login_attempts[client_ip] = attempts
+    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+        return True
+    return False
+
+def _record_login_attempt(client_ip: str):
+    _login_attempts.setdefault(client_ip, []).append(time.time())
+
 @app.post("/api/account/login")
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if _check_login_rate(client_ip):
+        await asyncio.sleep(_LOGIN_COOLDOWN)
+        raise HTTPException(429, "Too many login attempts — try again later")
     acc = _load_account()
     if not acc:
         raise HTTPException(404, "No account exists")
-    if req.username.strip() != acc.get("username") or not _verify_password(
-        req.password, acc["password_hash"], acc["password_salt"]
-    ):
+    # Always compute the hash check regardless of username match
+    # to prevent username enumeration via timing side-channel
+    user_matches = req.username.strip() == acc.get("username")
+    pw_ok = _verify_password(req.password, acc["password_hash"], acc["password_salt"])
+    if not user_matches or not pw_ok:
+        _record_login_attempt(client_ip)
         # Deliberate short sleep to blunt naive brute force
         await asyncio.sleep(0.3)
         raise HTTPException(401, "Invalid credentials")

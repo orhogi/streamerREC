@@ -1,3 +1,7 @@
+networks:
+  streamrec:
+    driver: bridge
+
 services:
 
   # ── WireProxy (SOCKS5 proxy over WireGuard) ───────────────────────────────────
@@ -16,10 +20,12 @@ services:
       - ./wg0.conf:/etc/wireproxy/wg0.conf:ro
     command: -c /etc/wireproxy/wg0.conf
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "--timeout=5", "http://ifconfig.me"]
+      test: ["CMD", "sh", "-c", "ss -tln | grep -q 1080 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - streamrec
 
   # ── StreamRec ─────────────────────────────────────────────────────────────────
   streamrec:
@@ -43,3 +49,5 @@ services:
       - STATIC_DIR=/app
       # Uncomment the line below to enable Raspberry Pi / low-power mode
       # - STREAMREC_PI_MODE=1
+    networks:
+      - streamrec
