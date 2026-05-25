@@ -1466,17 +1466,23 @@ async function fetchSlots() {
 async function fetchChannels() {
   try {
     const res = await fetch(`${API}/api/channels`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const list = await res.json();
     channels = {};
     list.forEach(c => channels[c.id] = c);
     renderChannels();
-  } catch {}
+    _apiErrCount = 0;
+  } catch (e) {
+    _apiErrCount = (_apiErrCount || 0) + 1;
+    if (_apiErrCount <= 3) toast('Failed to load channels', true);
+  }
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 async function loadSettings() {
   try {
     const res = await fetch(`${API}/api/settings`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const s = await res.json();
     globalSettings = s;
     setToggle('s-pi-mode',          !!s.pi_mode);
@@ -1498,7 +1504,9 @@ async function loadSettings() {
     await populateCookiesSelects();
     document.getElementById('s-cookies-file').value = s.cookies_file ?? '';
     loadCookiesList();
-  } catch {}
+  } catch (e) {
+    toast('Failed to load settings', true);
+  }
 }
 
 async function saveSettings() {
@@ -1717,14 +1725,14 @@ async function importConfig(input) {
 // ── Theme ─────────────────────────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light');
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  localStorage.setItem('streamrecTheme', isLight ? 'light' : 'dark');
   const icon = document.getElementById('theme-icon');
   icon.innerHTML = isLight
     ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
     : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 }
 (function initTheme() {
-  if (localStorage.getItem('theme') === 'light') {
+  if (localStorage.getItem('streamrecTheme') === 'light') {
     document.documentElement.classList.add('light');
     const icon = document.getElementById('theme-icon');
     if (icon) icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
@@ -2003,6 +2011,8 @@ async function initPolling() {
     const data = await res.json();
     if (data.poll_interval) pollInterval = data.poll_interval * 1000;
   } catch {}
+  // Wait for initial fetches to complete before starting polling
+  await Promise.allSettled([fetchChannels(), loadSettings(), fetchAccount(), fetchSlots()]);
   startPolling();
 }
 
@@ -2308,11 +2318,8 @@ async function removeAccount() {
   } catch (e) { toast('Error: ' + e.message, true); }
 }
 
-fetchChannels();
-loadSettings();
-fetchAccount();
+// initPolling handles the initial fetches + starts polling
 initPolling();
-fetchSlots();
 
 // Tick recording durations every second without a full fetch
 setInterval(() => {

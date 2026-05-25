@@ -21,7 +21,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 COPY index.html .
 
-RUN mkdir -p /recordings
+RUN mkdir -p /recordings && \
+    useradd --system --home-dir /app --shell /usr/sbin/nologin streamrec && \
+    chown -R streamrec:streamrec /app /recordings
+
+USER streamrec
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
