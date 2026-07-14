@@ -889,13 +889,14 @@ async def run_recording(rec_id: str):
             suffix    = Path(fp).suffix
             fixed_path = str(Path(fp).with_name(Path(fp).stem + "_fixed" + suffix))
             try:
-                fix_proc = await asyncio.create_subprocess_exec(
-                    "ffmpeg", "-i", fp, "-c", "copy", "-movflags", "+faststart",
-                    "-threads", ffmpeg_threads, fixed_path, "-y",
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await asyncio.wait_for(fix_proc.wait(), timeout=REMUX_TIMEOUT)
+                async with _proc_semaphore:
+                    fix_proc = await asyncio.create_subprocess_exec(
+                        "ffmpeg", "-i", fp, "-c", "copy", "-movflags", "+faststart",
+                        "-threads", ffmpeg_threads, fixed_path, "-y",
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await asyncio.wait_for(fix_proc.wait(), timeout=REMUX_TIMEOUT)
                 if fix_proc.returncode == 0 and Path(fixed_path).exists():
                     Path(fp).unlink(missing_ok=True)
                     Path(fixed_path).rename(fp)
@@ -918,15 +919,16 @@ async def run_recording(rec_id: str):
         if auto_convert and fp and not fp.endswith(".mp4") and Path(fp).exists():
             mp4_path = str(Path(fp).with_suffix(".mp4"))
             try:
-                conv = await asyncio.create_subprocess_exec(
-                    "ffmpeg", "-i", fp, "-c", "copy",
-                    "-movflags", "+faststart",
-                    "-threads", ffmpeg_threads,
-                    mp4_path, "-y",
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await conv.wait()
+                async with _proc_semaphore:
+                    conv = await asyncio.create_subprocess_exec(
+                        "ffmpeg", "-i", fp, "-c", "copy",
+                        "-movflags", "+faststart",
+                        "-threads", ffmpeg_threads,
+                        mp4_path, "-y",
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await asyncio.wait_for(conv.wait(), timeout=REMUX_TIMEOUT)
                 if conv.returncode == 0:
                     if delete_orig:
                         Path(fp).unlink(missing_ok=True)
@@ -1683,6 +1685,7 @@ async def health():
         "recordings": len(recordings),
         "active": active_recs,
         "uptime": int(time.time() - START_TIME),
+        "pi_mode": _is_pi(),
     }
 
 
@@ -2046,5 +2049,113 @@ async def login(req: LoginRequest, request: Request):
     return _public_account(acc)
 
 
-# ── Static files (must be last) ───────────────────────────────────────────────
+# ── yt-dlp management ────────────────────────────────────────────────────────
+
+@app.get("/api/ytdlp-version")
+async def get_ytdlp_version():
+    """Get current and latest yt-dlp version."""
+    current = "unknown"
+    latest = None
+
+    # Get current version
+    try:
+        result = await asyncio.create_subprocess_exec(
+            "yt-dlp", "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await result.communicate()
+        if result.returncode == 0:
+            current = stdout.decode("utf-8").strip()
+    except Exception as e:
+        logger.warning("Failed to get yt-dlp version: %s", e)
+
+    # Get latest version from GitHub
+    try:
+        result = await asyncio.create_subprocess_exec(
+            "curl", "-sL", "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await result.communicate()
+        if result.returncode == 0:
+            import json
+            data = json.loads(stdout.decode("utf-8"))
+            latest = data.get("tag_name", "").lstrip("v")
+    except Exception as e:
+        logger.debug("Failed to fetch latest yt-dlp version: %s", e)
+
+    return {"current": current, "latest": latest}
+
+
+@app.post("/api/ytdlp-update")
+async def update_ytdlp():
+    """Update yt-dlp to the latest version."""
+    logger.info("Updating yt-dlp...")
+
+    try:
+        # Try pip update first (works for pip-installed yt-dlp)
+        result = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "pip", "install", "-U", "yt-dlp",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await asyncio.wait_for(result.communicate(), timeout=120)
+        output = stdout.decode("utf-8", errors="replace")
+
+        if result.returncode == 0:
+            # Get new version
+            version_check = await asyncio.create_subprocess_exec(
+                "yt-dlp", "--version",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            ver_stdout, _ = await version_check.communicate()
+            if version_check.returncode == 0:
+                new_version = ver_stdout.decode("utf-8").strip()
+                logger.info("yt-dlp updated to %s", new_version)
+                return {"success": True, "version": new_version}
+            else:
+                logger.info("yt-dlp updated (version check failed)")
+                return {"success": True, "version": "unknown"}
+        else:
+            # Pip failed, try downloading the binary directly (works in Docker)
+            logger.info("pip update failed, trying direct download...")
+            result = await asyncio.create_subprocess_exec(
+                "curl", "-L", "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp",
+                "-o", "/usr/local/bin/yt-dlp",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            stdout, _ = await asyncio.wait_for(result.communicate(), timeout=60)
+
+            if result.returncode == 0:
+                # Make executable
+                await asyncio.create_subprocess_exec("chmod", "+x", "/usr/local/bin/yt-dlp")
+
+                # Get new version
+                version_check = await asyncio.create_subprocess_exec(
+                    "yt-dlp", "--version",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                ver_stdout, _ = await version_check.communicate()
+                if version_check.returncode == 0:
+                    new_version = ver_stdout.decode("utf-8").strip()
+                    logger.info("yt-dlp updated to %s (via direct download)", new_version)
+                    return {"success": True, "version": new_version}
+
+            error_msg = f"Update failed: {output[:500]}" if result.returncode != 0 else "Update failed"
+            logger.warning(error_msg)
+            return {"success": False, "error": error_msg}
+
+    except asyncio.TimeoutError:
+        logger.warning("yt-dlp update timed out")
+        return {"success": False, "error": "Update timed out"}
+    except Exception as e:
+        logger.exception("yt-dlp update error")
+        return {"success": False, "error": str(e)}
+
+
+# ── Static files (must be last) ──────────────────────────────────────────────
 app.mount("/", StaticFiles(directory=_static_dir, html=True), name="static")

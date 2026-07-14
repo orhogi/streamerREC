@@ -690,6 +690,21 @@ textarea.field-input{font-family:var(--sans);resize:vertical;min-height:52px}
         </div>
       </div>
 
+      <div class="settings-section">
+        <div class="settings-section-title">System</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-info">
+              <div class="settings-label">yt-dlp version</div>
+              <div class="settings-desc" id="ytdlpVersion">Loading...</div>
+            </div>
+            <div class="settings-control">
+              <button class="btn-cancel" onclick="updateYtdlp()" id="ytdlpUpdateBtn" style="height:30px;font-size:12px">Update yt-dlp</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;gap:8px">
         <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
         <button class="btn-cancel" onclick="loadSettings()">Reset</button>
@@ -946,6 +961,85 @@ textarea.field-input{font-family:var(--sans);resize:vertical;min-height:52px}
   <div class="preview-title" id="previewTitle"></div>
 </div>
 
+<!-- Welcome / Create Account modal -->
+<div class="overlay" id="welcomeOverlay" onclick="overlayClick(event,'welcomeOverlay')">
+  <div class="modal">
+    <div class="modal-title">Welcome to StreamRec</div>
+    <div class="welcome-hero">Create a local account to personalize your dashboard, or skip to use StreamRec as a guest.</div>
+    <div class="field">
+      <div class="field-lbl">Username</div>
+      <input class="field-input" id="welUsername" type="text" placeholder="Pick a username (2–32 chars)" maxlength="32" oninput="updatePwMatch()">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <div class="field-lbl">Password</div>
+        <input class="field-input" id="welPassword" type="password" placeholder="At least 4 characters" oninput="updatePwMatch()">
+      </div>
+      <div class="field">
+        <div class="field-lbl">Confirm password</div>
+        <input class="field-input" id="welPasswordConfirm" type="password" placeholder="Re-enter password" oninput="updatePwMatch()">
+      </div>
+    </div>
+    <div class="pw-hint" id="welPwHint"></div>
+    <div class="modal-section">Profile picture (optional)</div>
+    <div class="avatar-picker-row">
+      <div class="account-pfp-fallback big" id="welAvatarPreview">?</div>
+      <div class="avatar-picker-actions">
+        <label class="file-label">
+          Choose image
+          <input type="file" id="welAvatarInput" accept="image/*" style="display:none" onchange="previewAvatarFile(this,'welAvatarPreview')">
+        </label>
+        <button class="btn-cancel" style="height:28px;font-size:11px" onclick="clearAvatarPreview('welAvatarPreview','welAvatarInput')">Clear</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="skipAccount()">Skip for now</button>
+      <button class="btn-primary" id="welConfirmBtn" onclick="createAccount()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Settings modal -->
+<div class="overlay" id="accountSettingsOverlay" onclick="overlayClick(event,'accountSettingsOverlay')">
+  <div class="modal">
+    <div class="modal-title">Account Settings</div>
+    <div class="avatar-picker-row" style="margin-bottom:18px">
+      <div class="account-pfp-fallback big" id="accSettingsAvatar">?</div>
+      <div class="avatar-picker-actions">
+        <label class="file-label">
+          Change picture
+          <input type="file" accept="image/*" style="display:none" onchange="uploadAccountAvatar(this)">
+        </label>
+        <button class="btn-cancel" style="height:28px;font-size:11px" onclick="removeAccountAvatar()">Remove picture</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-lbl">Username</div>
+      <input class="field-input" id="accSettingsUsername" type="text" maxlength="32">
+    </div>
+    <div class="modal-section">Change password</div>
+    <div class="field">
+      <div class="field-lbl">Current password</div>
+      <input class="field-input" id="accSettingsCurrentPw" type="password" placeholder="Required to change password">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <div class="field-lbl">New password</div>
+        <input class="field-input" id="accSettingsNewPw" type="password" placeholder="Leave blank to keep current" oninput="updateSettingsPwMatch()">
+      </div>
+      <div class="field">
+        <div class="field-lbl">Confirm new password</div>
+        <input class="field-input" id="accSettingsNewPwConfirm" type="password" placeholder="Re-enter new password" oninput="updateSettingsPwMatch()">
+      </div>
+    </div>
+    <div class="pw-hint" id="accSettingsPwHint">Leave blank to keep current password.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAccountSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveAccountSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -964,7 +1058,7 @@ function navigate(page) {
   document.getElementById('page-' + page).classList.add('active');
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
-  if (page === 'settings') loadSettings();
+  if (page === 'settings') { loadSettings(); fetchYtdlpVersion(); }
   if (page === 'recordings') { fetchRecordings(); fetchDisk(); }
   if (page === 'platforms') fetchPlatforms();
 }
@@ -995,10 +1089,11 @@ const PLAT_RE = [
   [/cam4\.com/i,               'Cam4',       '🔴'],
   [/myfreecams\.com/i,         'MyFreeCams', '🟢'],
   [/camsoda\.com/i,            'CamSoda',    '🟠'],
-  [/bongacams\.com/i,          'BongaCams',  '🟡'],
-  [/cammodels\.com/i,          'CamModels',  '🟣'],
-  [/streamate\.com/i,          'Streamate',  '🔴'],
-  [/flirt4free\.com/i,         'Flirt4Free', '🟣'],
+  [/bongacams\\.com/i,          'BongaCams',  '🟡'],
+  [/cammodels\\.com/i,          'CamModels',  '🟣'],
+  [/streamate\\.com/i,          'Streamate',  '🔴'],
+  [/flirt4free\\.com/i,         'Flirt4Free', '🟣'],
+  [/pandalive\\.co/i,           'Pandalive',  '🐼'],
 ];
 
 function detectPlatform() {
@@ -1538,6 +1633,49 @@ async function saveSettings() {
     initPolling();
     fetchSlots();
   } catch(e) { toast('Error: ' + e.message, true); }
+}
+
+// ── yt-dlp version management ────────────────────────────────────────────────
+async function fetchYtdlpVersion() {
+  const el = document.getElementById('ytdlpVersion');
+  try {
+    const res = await fetch(`${API}/api/ytdlp-version`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    el.textContent = `Installed: ${data.current}`;
+    if (data.latest && data.latest !== data.current) {
+      el.textContent += ` (latest: ${data.latest})`;
+    } else if (data.latest) {
+      el.textContent += ' ✓ up to date';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load version';
+  }
+}
+
+async function updateYtdlp() {
+  const btn = document.getElementById('ytdlpUpdateBtn');
+  const el = document.getElementById('ytdlpVersion');
+  btn.disabled = true;
+  btn.textContent = 'Updating...';
+  el.textContent = 'Updating yt-dlp...';
+
+  try {
+    const res = await fetch(`${API}/api/ytdlp-update`, { method: 'POST' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.success) {
+      toast(`yt-dlp updated to ${data.version}`);
+    } else {
+      toast(data.error || 'Update failed', true);
+    }
+    await fetchYtdlpVersion();
+  } catch (e) {
+    toast('Update failed: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Update yt-dlp';
+  }
 }
 
 // ── Recordings page ───────────────────────────────────────────────────────────
