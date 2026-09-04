@@ -23,7 +23,7 @@ COPY index.html .
 
 RUN mkdir -p /recordings && \
     useradd --system --home-dir /app --shell /usr/sbin/nologin streamrec && \
-    chown -R streamrec:streamrec /app /recordings
+    chown -R streamrec:streamrec /app /recordings /usr/local/bin/yt-dlp
 
 USER streamrec
 

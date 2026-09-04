@@ -4,878 +4,1313 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamRec</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23ef4444'/><circle cx='50' cy='50' r='20' fill='white'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%236366f1'/><circle cx='50' cy='50' r='20' fill='%23ffffff'/><circle cx='50' cy='50' r='10' fill='%23ef4444'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#06060c; --s1:#0d0d17; --s2:#131320; --s3:#1a1a2a;
-  --border:#22223a; --border2:#2e2e50;
-  --text:#e4e4f0; --sub:#8888b8; --muted:#555578;
-  --red:#fb7185; --accent:#818cf8; --green:#34d399; --amber:#fbbf24; --violet:#a78bfa;
-  --blue:var(--accent); --purple:var(--violet);
-  --mono:'SF Mono','Cascadia Code','JetBrains Mono','Consolas',monospace;
-  --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --navh:52px; --rad:12px;
+
+:root {
+  --bg: #090a10;
+  --panel: rgba(18, 20, 32, 0.7);
+  --panel-solid: #121420;
+  --card: rgba(24, 27, 44, 0.6);
+  --card-hover: rgba(30, 34, 56, 0.85);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.35);
+  --border-focus: #6366f1;
+  --text: #f1f5f9;
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
+  
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-glow: rgba(99, 102, 241, 0.25);
+  
+  --red: #f43f5e;
+  --red-glow: rgba(244, 63, 94, 0.25);
+  --green: #10b981;
+  --amber: #f59e0b;
+  --purple: #a855f7;
+
+  --sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 }
-html.light{
-  --bg:#f4f4fa; --s1:#fff; --s2:#eeeef6; --s3:#e2e2f0;
-  --border:#d8d8e8; --border2:#c0c0d8; --text:#0d0d17; --sub:#666688; --muted:#9999bb;
+
+html.light {
+  --bg: #f8fafc;
+  --panel: rgba(255, 255, 255, 0.85);
+  --panel-solid: #ffffff;
+  --card: rgba(241, 245, 249, 0.7);
+  --card-hover: rgba(255, 255, 255, 0.95);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.4);
+  --text: #0f172a;
+  --text-dim: #475569;
+  --text-muted: #94a3b8;
 }
-html,body{height:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column;overflow:hidden}
 
-/* ── TOP NAV ── */
-.topnav{
-  height:var(--navh);background:var(--s1);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 16px;gap:0;flex-shrink:0;z-index:60
+html, body {
+  height: 100%;
+  font-family: var(--sans);
+  background-color: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
-.topnav-logo{
-  width:34px;height:34px;border-radius:8px;background:var(--accent);
-  display:flex;align-items:center;justify-content:center;margin-right:4px;
-  cursor:pointer;border:none;transition:all .2s;flex-shrink:0
+
+/* Background gradient orbs */
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
 }
-.topnav-logo:hover{filter:brightness(1.2)}
-.topnav-tabs{display:flex;align-items:center;gap:2px;flex:1}
-.nav-btn{
-  height:34px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:7px;
-  cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s;
-  font-family:var(--sans);font-size:12.5px;font-weight:500;white-space:nowrap
+.bg-glow::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: 20%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(99,102,241,0.07) 0%, transparent 65%);
+  filter: blur(80px);
 }
-.nav-btn:hover{color:var(--sub);background:var(--s2)}
-.nav-btn.active{color:var(--text);background:var(--s3);font-weight:600}
-.nav-btn span{font-size:12.5px}
-.nav-badge{width:7px;height:7px;background:var(--red);border-radius:50%;margin-left:-2px}
-.topnav-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.topnav-theme{
-  width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s
+.bg-glow::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  right: 10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(244,63,94,0.05) 0%, transparent 65%);
+  filter: blur(80px);
 }
-.topnav-theme:hover{color:var(--sub);background:var(--s2)}
 
-/* ── MAIN ── */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
-.page{display:none;flex-direction:column;flex:1;overflow:hidden}
-.page.active{display:flex}
-
-/* ── TOPBAR ── */
-.topbar{
-  height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;
-  padding:0 22px;gap:12px;flex-shrink:0;background:var(--s1)
+/* Layout */
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
-.topbar-title{font-size:17px;font-weight:700;letter-spacing:-.03em}
-.topbar-sub{font-size:11.5px;color:var(--sub);margin-left:2px;font-weight:500}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.search-wrap{position:relative;display:flex;align-items:center}
-.search-ico{position:absolute;left:10px;color:var(--muted);pointer-events:none;display:flex}
-.search-input{
-  background:var(--s2);border:1px solid var(--border);border-radius:20px;
-  padding:6px 12px 6px 32px;font-size:12px;color:var(--text);width:170px;
-  outline:none;transition:all .2s
+
+/* Header */
+.app-header {
+  height: 64px;
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
 }
-.search-input:focus{border-color:var(--accent);width:210px}
-.icon-btn{
-  width:34px;height:34px;border-radius:8px;background:var(--s2);border:1px solid var(--border);
-  color:var(--sub);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.icon-btn:hover{border-color:var(--accent);color:var(--text);background:var(--s3)}
-.add-btn{
-  background:var(--accent);border:none;border-radius:20px;color:#fff;font-weight:600;font-size:12px;
-  padding:0 16px;height:33px;cursor:pointer;display:flex;align-items:center;gap:5px;
-  transition:all .2s;white-space:nowrap;letter-spacing:-.01em
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 16px var(--primary-glow);
 }
-.add-btn:hover{filter:brightness(1.15);box-shadow:0 2px 16px rgba(129,140,248,.3)}
-
-/* ── GRID ── */
-.grid-area{flex:1;overflow-y:auto;padding:16px 20px}
-.channels-grid{display:flex;flex-direction:column;gap:6px}
-
-/* ── NEW CARD ── */
-.card-new{
-  background:var(--s1);border:1px solid var(--border);border-radius:12px;
-  display:flex;align-items:stretch;gap:0;transition:all .2s;cursor:default;
-  position:relative;overflow:hidden;min-height:72px
+.brand-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--text), var(--text-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.card-new:hover{border-color:var(--border2);background:var(--s2)}
-.ch-card.selected{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(129,140,248,.25)}
-.ch-card.dragging{opacity:.35}.ch-card.drag-over{border-color:var(--accent);border-style:dashed}
-.cn-left{display:flex;align-items:center;padding:12px 0 12px 14px;flex-shrink:0}
-.cn-avatar-wrap{position:relative;width:44px;height:44px}
-.cn-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block;background:var(--s3);border:2px solid var(--border)}
-.cn-avatar-fb{width:44px;height:44px;border-radius:50%;background:var(--s3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--sub);text-transform:uppercase}
-.cn-platform{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:5px;border:2px solid var(--s1);display:flex;align-items:center;justify-content:center;font-size:9px}
-.cn-center{flex:1;min-width:0;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px}
-.cn-toprow{display:flex;align-items:center;gap:8px}
-.cn-name{font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
-.cn-status{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:10px;flex-shrink:0}
-.cn-status.live{background:rgba(251,113,133,.12);color:var(--red)}
-.cn-status.monitoring{background:rgba(129,140,248,.1);color:var(--accent)}
-.cn-status.off{background:var(--s2);color:var(--muted)}
-.cn-stat-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
-.cn-status.live .cn-stat-dot{animation:blink .8s step-end infinite}
-.cn-status.monitoring .cn-stat-dot{animation:blink 1.5s step-end infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
-.cn-title{font-size:11px;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.cn-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--sub);font-family:var(--mono)}
-.cn-checked{color:var(--muted)!important}
-.cn-tags{display:flex;gap:4px;margin-top:1px}
-.cn-tag{font-size:9px;font-family:var(--mono);padding:1px 6px;border-radius:4px;font-weight:600;letter-spacing:.04em}
-.cn-tag.proxy{background:rgba(167,139,250,.1);color:var(--violet)}
-.cn-tag.cookies{background:rgba(251,191,36,.1);color:var(--amber)}
-.cn-tag.notes{background:rgba(52,211,153,.1);color:var(--green)}
-.cn-right{display:flex;align-items:center;gap:2px;padding:0 10px;flex-shrink:0}
-.cn-act{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
-.cn-act:hover{background:var(--s3);color:var(--sub)}
-.cn-act.danger:hover{color:var(--red);background:rgba(251,113,133,.1)}
-.cn-act.rec:hover{color:var(--red);background:rgba(251,113,133,.1)}
-.cn-toggle-btn{width:36px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:transparent;border-radius:7px;transition:all .15s}
-.cn-toggle-btn:hover{background:var(--s3)}
-.cn-toggle-knob{width:28px;height:16px;background:var(--accent);border-radius:8px;position:relative;transition:background .2s}
-.cn-toggle-knob.off{background:var(--s3);border:1px solid var(--border)}
-.cn-toggle-knob::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;background:#fff;border-radius:50%;transition:transform .2s}
-.cn-toggle-knob.off::after{transform:translateX(0)}
-.cn-toggle-knob:not(.off)::after{transform:translateX(12px)}
-.cn-progress{position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent}
-.cn-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--violet));transition:width .6s ease;width:0%}
-.cn-progress-fill.pulse{animation:progPulse 1.5s ease-in-out infinite}
-.cn-progress-fill.stalled{background:var(--amber);animation:none;width:100%!important}
-@keyframes progPulse{0%,100%{opacity:.3}50%{opacity:1}}
-
-/* ── Recording page actions ── */
-.act-btn{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;text-decoration:none}
-.act-btn:hover{background:var(--s3);color:var(--sub)}
-.act-btn.danger:hover{color:var(--red);background:rgba(251,113,133,.1)}
-.act-btn svg{width:14px;height:14px}
-
-/* ── MODALS (drawer style) ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:stretch;justify-content:flex-end}
-.overlay.open{display:flex}
-.modal{background:var(--s1);border-left:1px solid var(--border);width:480px;padding:30px;animation:drwIn .25s ease;max-height:100vh;overflow-y:auto;box-shadow:-8px 0 40px rgba(0,0,0,.3);display:flex;flex-direction:column}
-.modal.wide{width:600px}
-@keyframes drwIn{from{transform:translateX(40px);opacity:.7}to{transform:translateX(0);opacity:1}}
-.modal-title{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:24px;display:flex;align-items:center;gap:10px}
-.modal-title::before{content:'';width:4px;height:24px;background:var(--accent);border-radius:2px}
-.modal-section{font-size:10.5px;color:var(--sub);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin:18px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.field{margin-bottom:14px}
-.field-lbl{font-size:10.5px;color:var(--sub);letter-spacing:.06em;margin-bottom:6px;text-transform:uppercase;font-weight:600}
-.field-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
-.field-input:focus{border-color:var(--accent)}
-select.field-input{cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555578'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
-textarea.field-input{font-family:var(--sans);resize:vertical;min-height:52px}
-.field-row{display:flex;gap:12px}.field-row .field{flex:1}
-.platform-detect{font-size:11px;margin-top:5px;min-height:16px;display:flex;align-items:center;gap:6px;color:var(--sub)}
-.detect-badge{background:rgba(129,140,248,.1);color:var(--accent);border:1px solid rgba(129,140,248,.2);padding:2px 9px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:500}
-
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)}
-.toggle-row:last-child{border-bottom:none}
-.toggle-info{display:flex;flex-direction:column;gap:2px}
-.toggle-title{font-size:13.5px;font-weight:550;color:var(--text)}
-.toggle-desc{font-size:11px;color:var(--sub)}
-.sm-toggle{width:40px;height:22px;background:var(--accent);border-radius:11px;position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0}
-.sm-toggle.off{background:var(--s3);border:1px solid var(--border)}
-.sm-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
-.sm-toggle.off::after{transform:translateX(0)}
-.sm-toggle:not(.off)::after{transform:translateX(18px)}
-
-.modal-actions{display:flex;gap:8px;margin-top:24px;justify-content:flex-end}
-.btn-cancel{background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--sub);font-size:13px;font-weight:500;padding:0 18px;height:38px;cursor:pointer;transition:all .15s}
-.btn-cancel:hover{border-color:var(--border2);color:var(--text);background:var(--s3)}
-.btn-primary{background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:600;padding:0 20px;height:38px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
-.btn-primary:hover{filter:brightness(1.12);box-shadow:0 4px 16px rgba(129,140,248,.3)}
-.btn-primary:disabled{background:var(--s3);color:var(--muted);cursor:not-allowed;box-shadow:none;filter:none}
-.btn-danger{background:rgba(251,113,133,.08);border:1px solid rgba(251,113,133,.2);border-radius:10px;color:var(--red);font-size:13px;font-weight:500;padding:0 18px;height:38px;cursor:pointer;transition:all .15s}
-.btn-danger:hover{background:rgba(251,113,133,.15)}
-
-/* ── SETTINGS ── */
-.settings-body{flex:1;overflow-y:auto;padding:28px;max-width:700px}
-.settings-section{margin-bottom:30px}
-.settings-section-title{font-size:11.5px;font-weight:700;color:var(--sub);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px}
-.settings-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-.settings-row{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border)}
-.settings-row:last-child{border-bottom:none}
-.settings-info{display:flex;flex-direction:column;gap:3px}
-.settings-label{font-size:13.5px;font-weight:550;color:var(--text)}
-.settings-desc{font-size:11.5px;color:var(--sub);line-height:1.4}
-.settings-control{flex-shrink:0}
-.settings-select{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 30px 7px 11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555578'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .15s}
-.settings-select:focus{border-color:var(--accent)}
-.settings-input{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 11px;outline:none;width:70px;text-align:right;transition:border-color .15s}
-.settings-input:focus{border-color:var(--accent)}
-
-/* ── LOG ── */
-.log-drawer{position:fixed;bottom:0;left:0;right:0;height:210px;background:#060610;border-top:1px solid var(--border);z-index:100;transform:translateY(100%);transition:transform .28s ease;display:flex;flex-direction:column}
-.log-drawer.open{transform:translateY(0)}
-.log-hdr{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
-.log-title-txt{font-family:var(--mono);font-size:11px;color:var(--sub);letter-spacing:.06em;font-weight:600}
-.log-close{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 6px;border-radius:6px;transition:all .15s}
-.log-close:hover{color:var(--text);background:var(--s3)}
-.log-body{flex:1;overflow-y:auto;padding:8px 18px;display:flex;flex-direction:column;gap:1px}
-.log-line{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;white-space:pre-wrap;word-break:break-all}
-.log-line.err{color:#f87171}
-
-/* ── EMPTY ── */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:12px}
-.empty-state svg{width:48px;height:48px;opacity:.15;color:var(--sub)}
-.empty-state p{font-size:15px;font-weight:600;color:var(--sub)}
-.empty-state small{font-size:12px;color:var(--muted)}
-
-/* ── TOAST ── */
-#toast{position:fixed;bottom:24px;right:24px;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:11px 18px;font-size:12.5px;color:var(--text);opacity:0;transform:translateY(10px);transition:all .22s;pointer-events:none;z-index:500;max-width:300px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-#toast.show{opacity:1;transform:translateY(0)}
-
-/* ── DISK ── */
-.disk-indicator{display:flex;align-items:center;gap:8px}
-.disk-bar{width:90px;height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
-.disk-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
-.disk-fill.warn{background:var(--amber)}.disk-fill.danger{background:var(--red)}
-.disk-text{font-family:var(--mono);font-size:10.5px;color:var(--sub);white-space:nowrap}
-
-/* ── RECORDINGS ── */
-.rec-list{display:flex;flex-direction:column;gap:8px}
-.rec-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:14px;transition:all .2s}
-.rec-row:hover{border-color:var(--border2);transform:translateX(2px)}
-.rec-icon{width:44px;height:44px;border-radius:10px;background:var(--s3);display:flex;align-items:center;justify-content:center;color:var(--sub);flex-shrink:0;overflow:hidden}
-.rec-info{flex:1;min-width:0}
-.rec-name{font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
-.rec-meta{font-size:11px;color:var(--sub);font-family:var(--mono);display:flex;gap:12px;flex-wrap:wrap}
-.rec-actions{display:flex;gap:4px;flex-shrink:0}
-.rec-status{font-size:9.5px;font-family:var(--mono);padding:4px 9px;border-radius:6px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.rec-status.recording{background:rgba(129,140,248,.12);color:var(--accent)}
-.rec-status.completed{background:rgba(52,211,153,.12);color:var(--green)}
-.rec-status.error{background:rgba(251,113,133,.12);color:var(--red)}
-.rec-status.starting{background:rgba(251,191,36,.12);color:var(--amber)}
-.rec-status.archived{background:rgba(167,139,250,.12);color:var(--violet)}
-
-/* ── MULTI-SELECT ── */
-.select-checkbox{position:absolute;top:8px;left:8px;width:22px;height:22px;border:2px solid var(--border2);border-radius:6px;background:var(--s2);cursor:pointer;z-index:5;display:none;align-items:center;justify-content:center;transition:all .15s}
-.select-mode .select-checkbox{display:flex}
-.ch-card.selected .select-checkbox{background:var(--accent);border-color:var(--accent)}
-.ch-card.selected .select-checkbox::after{content:'✓';color:#fff;font-size:13px;font-weight:800}
-.bulk-bar{display:none;align-items:center;gap:10px;padding:10px 22px;background:var(--s1);border-bottom:1px solid var(--border)}
-.bulk-bar.show{display:flex}
-.bulk-count{font-size:12px;color:var(--sub);font-family:var(--mono);font-weight:600}
-.bulk-btn{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--sub);font-size:12px;font-weight:500;padding:6px 14px;cursor:pointer;transition:all .15s}
-.bulk-btn:hover{border-color:var(--accent);color:var(--text);background:var(--s3)}
-.bulk-btn.danger{color:var(--red)}.bulk-btn.danger:hover{border-color:var(--red);background:rgba(251,113,133,.1)}
-
-/* ── DRAG ── */
-.ch-card.dragging{opacity:.3;transform:scale(.97)}
-.ch-card.drag-over{border-color:var(--accent);border-style:dashed}
-
-/* ── PREVIEW ── */
-.preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column}
-.preview-overlay.open{display:flex}
-.preview-close{position:absolute;top:20px;right:20px;background:none;border:none;color:#fff;cursor:pointer;opacity:.5;transition:opacity .15s}
-.preview-close:hover{opacity:1}
-.preview-video{max-width:90vw;max-height:80vh;border-radius:16px;background:#000;box-shadow:0 30px 80px rgba(0,0,0,.7)}
-.preview-title{color:#fff;font-size:14px;margin-top:14px;opacity:.5;font-weight:500}
-
-/* ── COOKIES ── */
-.cookie-file-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--s1);border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
-.cookie-file-name{font-family:var(--mono);font-size:12px;color:var(--text)}
-.cookie-file-size{font-size:10.5px;color:var(--muted);margin-left:8px}
-
-/* ── ACCOUNT (now in topnav) ── */
-.account-corner{position:relative}
-.account-btn{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;background:var(--s2);border:1px solid var(--border);border-radius:99px;cursor:pointer;transition:all .15s;color:var(--text);font-size:12px;font-weight:500;border:none;outline:none}
-.account-btn:hover{border-color:var(--border2);background:var(--s3)}
-.account-pfp-img{width:27px;height:27px;border-radius:50%;object-fit:cover;display:block;background:var(--s3)}
-.account-pfp-fallback{width:27px;height:27px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;flex-shrink:0}
-.account-pfp-fallback.big{width:60px;height:60px;font-size:24px;border:2px solid var(--border)}
-.account-pfp-fallback.big img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-.account-name-txt{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.account-menu{position:absolute;top:46px;right:0;min-width:200px;background:var(--s1);border:1px solid var(--border2);border-radius:14px;padding:8px;display:none;flex-direction:column;gap:2px;box-shadow:0 16px 40px rgba(0,0,0,.45)}
-.account-menu.open{display:flex}
-.account-menu-item{background:transparent;border:none;padding:9px 14px;border-radius:8px;font-size:13px;color:var(--text);cursor:pointer;text-align:left;transition:background .12s}
-.account-menu-item:hover{background:var(--s2)}
-.account-menu-item.danger{color:var(--red)}.account-menu-item.danger:hover{background:rgba(251,113,133,.1)}
-.account-menu-sep{height:1px;background:var(--border);margin:5px 8px}
-.account-menu-header{padding:8px 14px 6px;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-
-/* ── WELCOME ── */
-.welcome-hero{font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6}
-.pw-hint{font-size:10.5px;color:var(--muted);margin-top:4px;min-height:14px}
-.pw-hint.err{color:var(--red)}.pw-hint.ok{color:var(--green)}
-.avatar-picker-row{display:flex;align-items:center;gap:16px}
-.avatar-picker-actions{display:flex;flex-direction:column;gap:7px}
-.file-label{display:inline-flex;align-items:center;justify-content:center;padding:0 14px;height:32px;font-size:12px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--sub);cursor:pointer;transition:all .15s}
-.file-label:hover{border-color:var(--border2);color:var(--text)}
-
-/* ── PLATFORMS ── */
-.platforms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.plat-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:16px;transition:all .2s}
-.plat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.15)}
-.plat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;color:#fff}
-.plat-info{min-width:0;flex:1}
-.plat-name{font-size:14px;font-weight:650;margin-bottom:3px}
-.plat-domain{font-size:10.5px;color:var(--sub);font-family:var(--mono);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.plat-notes{font-size:10.5px;color:var(--muted);line-height:1.4}
-
-/* ── PLATFORM COLORS ── */
-.plat-twitch{background:#9146ff}.plat-youtube{background:#ff0000}.plat-tiktok{background:#000}
-.plat-kick{background:#53fc18;color:#000!important}.plat-bilibili{background:#00a1d6}
-.plat-default{background:var(--s3)}
-
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--border2)}
-
-/* ── MOBILE ── */
-@media(max-width:768px){
-  :root{--navh:48px}
-  .topnav{padding:0 8px}
-  .topnav-logo{width:30px;height:30px;border-radius:6px}
-  .nav-btn{padding:0 8px;font-size:11px;gap:4px;height:30px}
-  .nav-btn span{display:none}
-  .account-name-txt{display:none}
-  .account-btn{padding:4px}
-  .main{flex:1}
-  .topbar{padding:0 12px;height:48px;flex-wrap:wrap}
-  .topbar-title{font-size:15px}
-  .search-wrap{order:10;width:100%}.search-input{width:100%}.search-input:focus{width:100%}
-  .add-btn{padding:0 12px;height:30px;font-size:11px}
-  .grid-area{padding:12px}
-  .channels-grid{grid-template-columns:1fr;gap:10px}
-  .modal{width:95vw;padding:20px;border-radius:16px}.modal.wide{width:95vw}
-  .log-drawer{height:180px;bottom:0}
-  .settings-body{padding:16px}
-  .field-row{flex-direction:column;gap:0}
-  .card-actions{flex-wrap:wrap;gap:3px;padding:7px 12px}
-  .bulk-bar{flex-wrap:wrap;padding:8px 14px}
-  .preview-video{max-width:95vw;max-height:70vh}
-  .topbar-right{gap:6px}
+.brand-badge {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
-@media(max-width:480px){.topbar-sub{display:none}.disk-indicator{display:none}}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.h-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.h-nav-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.h-nav-btn.active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 2px 10px var(--primary-glow);
+}
+.h-nav-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* User avatar / Guest */
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 99px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.user-btn:hover {
+  border-color: var(--border-hover);
+  background: var(--card-hover);
+}
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Main Workspace */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Views */
+.view-container {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.view-container.active {
+  display: flex;
+}
+
+/* Toolbar in Channels */
+.sub-toolbar {
+  height: 56px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.toolbar-left, .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.search-box {
+  position: relative;
+  width: 260px;
+}
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 36px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+.search-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--panel-solid);
+}
+
+.custom-select {
+  height: 36px;
+  padding: 0 28px 0 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394A3B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: all 0.2s;
+}
+.custom-select:focus {
+  border-color: var(--border-focus);
+}
+
+.btn-primary {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--primary-glow);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-ghost:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--card-hover);
+}
+
+/* Channels View */
+.channels-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.channels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+/* Channel Card */
+.channel-card {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+.channel-card:hover {
+  border-color: var(--border-hover);
+  background: var(--card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.channel-card.recording {
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.12);
+}
+.channel-card.live:not(.recording) {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.avatar-box {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.channel-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+}
+.platform-pill {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #111;
+  border: 2px solid var(--panel-solid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.card-header-info {
+  flex: 1;
+  min-width: 0;
+}
+.channel-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.channel-subtitle {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+.status-badge.live {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.status-badge.recording {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  animation: pulse-red 2s infinite;
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
+}
+.status-badge.idle {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.stream-title-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--border);
+  user-select: none;
+}
+
+.metrics-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 4px;
+}
+.metrics-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+.actions-left, .actions-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.icon-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border-color: var(--border);
+}
+.icon-action-btn.danger:hover {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--red);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+.icon-action-btn.rec-btn {
+  color: var(--red);
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.2);
+}
+.icon-action-btn.rec-btn:hover {
+  background: rgba(244, 63, 94, 0.2);
+}
+
+/* Switch toggle */
+.switch-control {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 1px solid var(--border);
+}
+.switch-control.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.switch-control.active .switch-knob {
+  transform: translateX(16px);
+}
+
+/* Settings View Layout */
+.settings-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.settings-sidebar {
+  width: 240px;
+  border-right: 1px solid var(--border);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.08);
+}
+.settings-side-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s;
+}
+.settings-side-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.settings-side-btn.active {
+  background: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.settings-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  max-width: 800px;
+}
+.settings-card-group {
+  margin-bottom: 32px;
+}
+.settings-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-box {
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-row:last-child {
+  border-bottom: none;
+}
+.settings-label-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 16px;
+}
+.settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.settings-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.text-input {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  transition: all 0.18s;
+}
+.text-input:focus {
+  border-color: var(--border-focus);
+}
+
+/* Modals / Drawers */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+.field-row > * {
+  flex: 1;
+}
+
+/* Log drawer */
+.log-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 240px;
+  background: #08090f;
+  border-top: 1px solid var(--border);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.log-drawer.open {
+  transform: translateY(0);
+}
+.log-header {
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+}
+.log-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: #94a3b8;
+}
+.log-line.err { color: #f87171; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2000;
+}
+#toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Empty state */
+.empty-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+  color: var(--text-muted);
+}
+.empty-view svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
 </style>
 </head>
 <body>
 
-<!-- Top Navigation Bar -->
-<header class="topnav">
-  <button class="topnav-logo" onclick="navigate('channels')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" width="18" height="18">
-      <circle cx="12" cy="12" r="4" fill="#fff" stroke="none"/>
-      <circle cx="12" cy="12" r="9"/>
-    </svg>
-  </button>
-  <nav class="topnav-tabs">
-    <button class="nav-btn active" id="nav-channels" onclick="navigate('channels')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Channels</span>
-      <span class="nav-badge" id="live-badge" style="display:none"></span>
-    </button>
-    <button class="nav-btn" id="nav-settings" onclick="navigate('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Settings</span>
-    </button>
-    <button class="nav-btn" id="nav-recordings" onclick="navigate('recordings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span>Recordings</span>
-    </button>
-    <button class="nav-btn" id="nav-platforms" onclick="navigate('platforms')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      <span>Platforms</span>
-    </button>
-  </nav>
-  <div class="topnav-right">
-    <button class="topnav-theme" onclick="toggleTheme()" title="Toggle theme">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" id="theme-icon" width="16" height="16"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    </button>
-    <!-- Account corner -->
-    <div class="account-corner" id="accountCorner" style="position:static">
-      <button class="account-btn" id="accountBtn" onclick="toggleAccountMenu(event)" title="Account">
-        <img class="account-pfp-img" id="accountPfpImg" alt="" style="display:none">
-        <div class="account-pfp-fallback" id="accountPfpFallback">G</div>
-        <span class="account-name-txt" id="accountNameTxt">Guest</span>
+<div class="bg-glow"></div>
+
+<div class="app-shell">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+          <circle cx="12" cy="12" r="8"/>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-title">StreamRec</span>
+      </div>
+      <span class="brand-badge" id="slot-indicator">0/6 slots</span>
+    </div>
+
+    <!-- Center Navigation -->
+    <nav class="header-nav">
+      <button class="h-nav-btn active" id="tab-channels" onclick="switchView('channels')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Channels
+        <span class="h-nav-badge" id="live-indicator-dot" style="display:none"></span>
       </button>
-      <div class="account-menu" id="accountMenu">
-        <div class="account-menu-header" id="accountMenuHeader">Signed in as Guest</div>
-        <button class="account-menu-item" id="accountMenuCreate" onclick="openWelcome(false)">Create account</button>
-        <button class="account-menu-item" id="accountMenuSettings" onclick="openAccountSettings()" style="display:none">Account settings</button>
-        <button class="account-menu-item" id="accountMenuPfp" onclick="closeAccountMenu(); document.getElementById('accountMenuPfpInput').click()" style="display:none">Change profile picture</button>
-        <input type="file" id="accountMenuPfpInput" accept="image/*" style="display:none" onchange="uploadAccountAvatar(this)">
-        <div class="account-menu-sep" id="accountMenuSep1" style="display:none"></div>
-        <button class="account-menu-item danger" id="accountMenuDelete" onclick="removeAccount()" style="display:none">Delete account</button>
+      <button class="h-nav-btn" id="tab-settings" onclick="switchView('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <!-- User / Theme Controls -->
+    <div class="header-actions">
+      <button class="btn-ghost" onclick="toggleTheme()" style="width:36px;padding:0;justify-content:center" title="Toggle Theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" id="theme-ico"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="user-btn" onclick="openWelcome(false)">
+        <div class="user-avatar" id="headerAvatar">G</div>
+        <span id="headerUsername">Guest</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="main-content">
+
+    <!-- VIEW: CHANNELS -->
+    <div class="view-container active" id="view-channels">
+      <div class="sub-toolbar">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input" id="channelSearch" placeholder="Search streamers, tags…" oninput="filterCards()">
+          </div>
+          <select class="custom-select" id="channelSort" onchange="renderChannels()">
+            <option value="custom">Custom Order</option>
+            <option value="name_asc">Name A-Z</option>
+            <option value="name_desc">Name Z-A</option>
+            <option value="platform">Platform</option>
+            <option value="recent">Recently Added</option>
+            <option value="live_first">Live First</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-primary" onclick="openAddModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Channel
+          </button>
+        </div>
+      </div>
+
+      <div class="channels-container">
+        <div class="channels-grid" id="channelsGrid"></div>
       </div>
     </div>
+
+    <!-- VIEW: SETTINGS -->
+    <div class="view-container" id="view-settings">
+      <div class="sub-toolbar">
+        <div class="toolbar-left">
+          <span style="font-weight:700;font-size:16px;color:var(--text)">Settings &amp; Configuration</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-ghost" onclick="loadSettings()">Reset Defaults</button>
+          <button class="btn-primary" onclick="saveSettings()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-wrapper">
+        <!-- Sidebar -->
+        <div class="settings-sidebar">
+          <button class="settings-side-btn active" onclick="switchSettingsSection('general', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            General &amp; Storage
+          </button>
+          <button class="settings-side-btn" onclick="switchSettingsSection('recording', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            Recording &amp; Quality
+          </button>
+          <button class="settings-side-btn" onclick="switchSettingsSection('network', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Network &amp; Retry
+          </button>
+          <button class="settings-side-btn" onclick="switchSettingsSection('notifications', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notifications
+          </button>
+          <button class="settings-side-btn" onclick="switchSettingsSection('cookies', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Cookies &amp; Auth
+          </button>
+          <button class="settings-side-btn" onclick="switchSettingsSection('system', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            System &amp; Backup
+          </button>
+        </div>
+
+        <!-- Panes -->
+        <div class="settings-scroll-area">
+          <!-- Pane: General -->
+          <div class="settings-pane-box active" id="spane-general">
+            <div class="settings-card-group">
+              <div class="settings-group-header">Performance &amp; Hardware</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Potato / Low-Power Mode</span>
+                    <span class="settings-desc">Reduces CPU, RAM, and disk writes for Raspberry Pi or minimal hardware</span>
+                  </div>
+                  <div class="switch-control" id="s-pi-mode" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card-group">
+              <div class="settings-group-header">Monitoring &amp; Storage</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Check Interval</span>
+                    <span class="settings-desc">How often channels are checked for live status</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input class="text-input" type="number" id="s-interval" min="10" max="3600" value="60" style="width:70px">
+                    <span style="font-size:12px;color:var(--text-muted)">sec</span>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Auto-Record when Live</span>
+                    <span class="settings-desc">Immediately begin stream capture once any channel goes online</span>
+                  </div>
+                  <div class="switch-control" id="s-record-on-add" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Disk Storage</span>
+                    <span class="settings-desc">Total space consumed by recordings on disk</span>
+                  </div>
+                  <span style="font-family:var(--mono);font-size:12px;color:var(--text-dim)" id="diskText">—</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Recording Retention</span>
+                    <span class="settings-desc">Auto-delete recordings older than this (0 = keep forever)</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input class="text-input" type="number" id="s-retention-days" min="0" max="3650" value="0" style="width:70px">
+                    <span style="font-size:12px;color:var(--text-muted)">days</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: Recording -->
+          <div class="settings-pane-box" id="spane-recording" style="display:none">
+            <div class="settings-card-group">
+              <div class="settings-group-header">Resolution &amp; Formats</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Default Quality</span>
+                    <span class="settings-desc">Stream resolution applied to newly added channels</span>
+                  </div>
+                  <select class="custom-select" id="s-quality">
+                    <option value="best">Best (Source)</option>
+                    <option value="1080p">1080p</option>
+                    <option value="720p">720p</option>
+                    <option value="480p">480p</option>
+                    <option value="worst">Lowest</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Default Format</span>
+                    <span class="settings-desc">Container format during recording</span>
+                  </div>
+                  <select class="custom-select" id="s-format">
+                    <option value="mp4">MP4</option>
+                    <option value="mkv">MKV</option>
+                    <option value="ts">TS</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Auto-Convert to MP4</span>
+                    <span class="settings-desc">Losslessly stream-copy completed recordings to MP4 using ffmpeg</span>
+                  </div>
+                  <div class="switch-control" id="s-auto-convert" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Delete Source After Convert</span>
+                    <span class="settings-desc">Remove raw TS/MKV file after successful MP4 conversion</span>
+                  </div>
+                  <div class="switch-control" id="s-delete-original" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: Network -->
+          <div class="settings-pane-box" id="spane-network" style="display:none">
+            <div class="settings-card-group">
+              <div class="settings-group-header">Proxy &amp; Reconnection</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Global Proxy</span>
+                    <span class="settings-desc">Applies to all recordings (HTTP/SOCKS5)</span>
+                  </div>
+                  <input class="text-input" type="text" id="s-proxy" placeholder="http://127.0.0.1:1080" style="width:220px">
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Extra yt-dlp Flags</span>
+                    <span class="settings-desc">Custom CLI arguments passed to yt-dlp</span>
+                  </div>
+                  <input class="text-input" type="text" id="s-extra-args" placeholder="--no-playlist" style="width:220px">
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Auto-Retry on Drop</span>
+                    <span class="settings-desc">Automatically reconnect when a live stream disconnects</span>
+                  </div>
+                  <div class="switch-control active" id="s-auto-retry" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Max Retries &amp; Delay</span>
+                    <span class="settings-desc">Number of retry attempts and seconds between attempts</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <input class="text-input" type="number" id="s-max-retries" min="1" max="50" value="5" style="width:60px">
+                    <input class="text-input" type="number" id="s-retry-delay" min="5" max="300" value="15" style="width:60px">
+                    <span style="font-size:12px;color:var(--text-muted)">sec</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: Notifications -->
+          <div class="settings-pane-box" id="spane-notifications" style="display:none">
+            <div class="settings-card-group">
+              <div class="settings-group-header">Webhooks</div>
+              <div class="settings-box">
+                <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:12px">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Webhook URL</span>
+                    <span class="settings-desc">Sends rich Discord embeds with streamer avatar, duration, and status, or clean JSON for Slack/ntfy</span>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <input class="text-input" type="text" id="s-webhook-url" placeholder="https://discord.com/api/webhooks/…" style="flex:1">
+                    <button class="btn-ghost" onclick="testWebhook()" id="btnTestWebhook">Test Webhook</button>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Auto-Stop Stalled Streams</span>
+                    <span class="settings-desc">Force-stop recordings that receive no new data for 2 minutes</span>
+                  </div>
+                  <div class="switch-control" id="s-auto-stop-stalled" onclick="toggleSwitch(this)">
+                    <div class="switch-knob"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: Cookies -->
+          <div class="settings-pane-box" id="spane-cookies" style="display:none">
+            <div class="settings-card-group">
+              <div class="settings-group-header">Cookies File</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Active Cookies File</span>
+                    <span class="settings-desc">Used for authenticated, age-restricted, or sub-only streams</span>
+                  </div>
+                  <select class="custom-select" id="s-cookies-file" style="min-width:140px">
+                    <option value="">None</option>
+                  </select>
+                </div>
+                <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:12px">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Upload Netscape Cookies</span>
+                    <span class="settings-desc">Export .txt cookies using browser extension and upload here</span>
+                  </div>
+                  <div style="display:flex;gap:10px;align-items:center">
+                    <label class="btn-ghost" style="cursor:pointer">
+                      Choose .txt file
+                      <input type="file" accept=".txt,.json" style="display:none" onchange="uploadCookies(this)">
+                    </label>
+                    <span id="cookiesUploadStatus" style="font-size:12px;color:var(--text-muted)"></span>
+                  </div>
+                  <div id="cookiesList" style="width:100%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: System -->
+          <div class="settings-pane-box" id="spane-system" style="display:none">
+            <div class="settings-card-group">
+              <div class="settings-group-header">System &amp; Backups</div>
+              <div class="settings-box">
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">yt-dlp Core Engine</span>
+                    <span class="settings-desc" id="ytdlpVersion">Loading...</span>
+                  </div>
+                  <button class="btn-ghost" onclick="updateYtdlp()" id="ytdlpUpdateBtn">Update yt-dlp</button>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-label-box">
+                    <span class="settings-title">Configuration Backup</span>
+                    <span class="settings-desc">Export or restore all channels and settings</span>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn-ghost" onclick="exportConfig()">Export JSON</button>
+                    <label class="btn-ghost" style="cursor:pointer">
+                      Import JSON
+                      <input type="file" accept=".json" style="display:none" onchange="importConfig(this)">
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
   </div>
-</header>
+</div>
 
-<!-- Main -->
-<div class="main">
-
-  <!-- Channels page -->
-  <div class="page active" id="page-channels">
-    <div class="topbar">
-      <span class="topbar-title">Channels</span>
-      <span class="topbar-sub" id="channel-count">0 channels</span>
-      <span class="topbar-sub" id="slot-indicator" style="color:var(--accent);margin-left:6px"></span>
-      <div class="topbar-right">
-        <div class="search-wrap">
-          <span class="search-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input class="search-input" id="searchInput" placeholder="Search channels…" oninput="debouncedFilterCards()">
-        </div>
-        <select class="settings-select" id="channelSort" onchange="renderChannels()" style="font-size:11px;width:110px">
-          <option value="custom">Custom order</option>
-          <option value="name_asc">Name A-Z</option>
-          <option value="name_desc">Name Z-A</option>
-          <option value="platform">Platform</option>
-          <option value="recent">Recently added</option>
-          <option value="last_checked">Last checked</option>
-          <option value="live_first">Live first</option>
-        </select>
-        <button class="add-btn" onclick="openAddModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          ADD
-        </button>
-        <button class="icon-btn" onclick="toggleSelectMode()" title="Multi-select" id="selectModeBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-        </button>
-      </div>
+<!-- Modal: Add Channel -->
+<div class="modal-overlay" id="addOverlay" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title">Add Monitored Channel</span>
+      <button class="icon-action-btn" onclick="closeAddModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="grid-area">
-      <div class="bulk-bar" id="bulkBar">
-        <span class="bulk-count" id="bulkCount">0 selected</span>
-        <button class="bulk-btn" onclick="bulkAction('record')">Record All</button>
-        <button class="bulk-btn" onclick="bulkAction('stop')">Stop All</button>
-        <button class="bulk-btn" onclick="bulkAction('delete')">Delete All</button>
-        <button class="bulk-btn" onclick="openBulkEdit()" style="color:var(--purple)">Edit Quality/Format</button>
-        <button class="bulk-btn" onclick="exitSelectMode()" style="margin-left:auto">Cancel</button>
-      </div>
-      <div class="channels-grid" id="channelsGrid"></div>
+
+    <div class="field-group">
+      <label class="field-label">Stream or Channel URL</label>
+      <input class="text-input" id="addUrl" placeholder="https://twitch.tv/channel or youtube.com/live/…" oninput="detectPlatform()">
+      <div id="addPlatformDetect" style="font-size:11px;color:var(--primary);margin-top:2px"></div>
     </div>
-  </div>
 
-  <!-- Settings page -->
-  <div class="page" id="page-settings">
-    <div class="topbar">
-      <span class="topbar-title">Settings</span>
-    </div>
-    <div class="settings-body">
-      <div class="settings-section">
-        <div class="settings-section-title">🥔 Performance</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Potato / Pi mode</div>
-              <div class="settings-desc">Reduces CPU, RAM, and I/O usage for Raspberry Pi and low-power PCs — fewer threads, slower polling, smaller buffers</div>
-            </div>
-            <button class="sm-toggle off" id="s-pi-mode" onclick="toggleSetting(this)"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Monitoring</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Check interval</div>
-              <div class="settings-desc">How often to check if a stream is live</div>
-            </div>
-            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
-              <input class="settings-input" type="number" id="s-interval" min="10" max="3600" value="60">
-              <span style="font-size:12px;color:var(--sub)">sec</span>
-            </div>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Auto-record when live</div>
-              <div class="settings-desc">Start recording automatically when a stream goes live</div>
-            </div>
-            <button class="sm-toggle off" id="s-record-on-add" onclick="toggleSetting(this)"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Recording Defaults</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Default quality</div>
-              <div class="settings-desc">Applied to new channels unless overridden</div>
-            </div>
-            <select class="settings-select" id="s-quality">
-              <option value="best">Best</option>
-              <option value="bestvideo+bestaudio">Best (split)</option>
-              <option value="1080p">1080p</option>
-              <option value="720p">720p</option>
-              <option value="480p">480p</option>
-              <option value="worst">Lowest</option>
-            </select>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Default format</div>
-              <div class="settings-desc">Container for recorded files</div>
-            </div>
-            <select class="settings-select" id="s-format">
-              <option value="mp4">MP4</option>
-              <option value="mkv">MKV</option>
-              <option value="ts">TS</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Post-Processing</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Auto-convert to MP4</div>
-              <div class="settings-desc">Re-mux completed recordings to MP4 using ffmpeg (stream copy, lossless)</div>
-            </div>
-            <button class="sm-toggle off" id="s-auto-convert" onclick="toggleSetting(this)"></button>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Delete original after convert</div>
-              <div class="settings-desc">Remove source file after successful MP4 conversion</div>
-            </div>
-            <button class="sm-toggle off" id="s-delete-original" onclick="toggleSetting(this)"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Auto-Retry</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Auto-retry on disconnect</div>
-              <div class="settings-desc">Automatically reconnect when a stream drops unexpectedly</div>
-            </div>
-            <button class="sm-toggle" id="s-auto-retry" onclick="toggleSetting(this)"></button>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Max retries</div>
-              <div class="settings-desc">Maximum reconnect attempts before giving up</div>
-            </div>
-            <div class="settings-control"><input class="settings-input" type="number" id="s-max-retries" min="1" max="50" value="5"></div>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Retry delay</div>
-              <div class="settings-desc">Seconds to wait before reconnecting</div>
-            </div>
-            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
-              <input class="settings-input" type="number" id="s-retry-delay" min="5" max="300" value="15">
-              <span style="font-size:12px;color:var(--sub)">sec</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Network &amp; Proxy</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Global proxy</div>
-              <div class="settings-desc">Used for all recordings unless overridden per-channel</div>
-            </div>
-            <input class="settings-input" type="text" id="s-proxy" placeholder="http://host:port" style="width:180px;text-align:left">
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Global extra yt-dlp args</div>
-              <div class="settings-desc">Applied to all recordings (per-channel overrides)</div>
-            </div>
-            <input class="settings-input" type="text" id="s-extra-args" placeholder="--no-playlist" style="width:180px;text-align:left">
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Storage &amp; Limits</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Recording retention</div>
-              <div class="settings-desc">Auto-delete recordings older than this (0 = keep forever)</div>
-            </div>
-            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
-              <input class="settings-input" type="number" id="s-retention-days" min="0" max="3650" value="0">
-              <span style="font-size:12px;color:var(--sub)">days</span>
-            </div>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Max recording duration</div>
-              <div class="settings-desc">Auto-stop recordings after this long (0 = no limit)</div>
-            </div>
-            <div class="settings-control" style="display:flex;align-items:center;gap:6px">
-              <input class="settings-input" type="number" id="s-max-duration" min="0" max="1440" value="0">
-              <span style="font-size:12px;color:var(--sub)">min</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Notifications</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Webhook URL</div>
-              <div class="settings-desc">POST JSON notifications when a stream goes live or recording completes. Use Discord/Slack webhook, ntfy.sh, or any HTTP endpoint.</div>
-            </div>
-            <input class="settings-input" type="text" id="s-webhook-url" placeholder="https://hooks.slack.com/…" style="width:220px;text-align:left">
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Auto-stop stalled recordings</div>
-              <div class="settings-desc">Force-stop recordings that receive no data for 2 minutes (stream likely ended silently)</div>
-            </div>
-            <button class="sm-toggle off" id="s-auto-stop-stalled" onclick="toggleSetting(this)"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Cookies &amp; Authentication</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Global cookies file</div>
-              <div class="settings-desc">Netscape cookies.txt — used unless a channel has its own</div>
-            </div>
-            <select class="settings-select" id="s-cookies-file">
-              <option value="">None</option>
-            </select>
-          </div>
-          <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px">
-            <div class="settings-info">
-              <div class="settings-label">Upload cookies file</div>
-              <div class="settings-desc">Export from browser using "Get cookies.txt LOCALLY" extension</div>
-            </div>
-            <div style="display:flex;gap:8px;width:100%;align-items:center">
-              <label class="btn-cancel" style="height:30px;font-size:12px;display:flex;align-items:center;cursor:pointer;white-space:nowrap">
-                Choose file
-                <input type="file" accept=".txt,.json" style="display:none" onchange="uploadCookies(this)">
-              </label>
-              <span id="cookiesUploadStatus" style="font-size:11px;color:var(--sub)"></span>
-            </div>
-            <div id="cookiesList" style="width:100%"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Import / Export</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Export configuration</div>
-              <div class="settings-desc">Download all channels and settings as a JSON file</div>
-            </div>
-            <button class="btn-cancel" onclick="exportConfig()" style="height:30px;font-size:12px">Export</button>
-          </div>
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">Import configuration</div>
-              <div class="settings-desc">Load channels and settings from a JSON file (merges by default)</div>
-            </div>
-            <label class="btn-cancel" style="height:30px;font-size:12px;display:flex;align-items:center;cursor:pointer">
-              Import
-              <input type="file" accept=".json" style="display:none" onchange="importConfig(this)">
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">System</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="settings-info">
-              <div class="settings-label">yt-dlp version</div>
-              <div class="settings-desc" id="ytdlpVersion">Loading...</div>
-            </div>
-            <div class="settings-control">
-              <button class="btn-cancel" onclick="updateYtdlp()" id="ytdlpUpdateBtn" style="height:30px;font-size:12px">Update yt-dlp</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
-        <button class="btn-cancel" onclick="loadSettings()">Reset</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recordings page -->
-  <div class="page" id="page-recordings">
-    <div class="topbar">
-      <span class="topbar-title">Recordings</span>
-      <span class="topbar-sub" id="rec-count">0 recordings</span>
-      <div class="topbar-right">
-        <select class="settings-select" id="recFilter" onchange="fetchRecordings()" style="font-size:11px;width:100px">
-          <option value="all">All</option>
-          <option value="completed">Completed</option>
-          <option value="recording">Recording</option>
-          <option value="error">Error</option>
-          <option value="archived">Archived</option>
-        </select>
-        <select class="settings-select" id="recSort" onchange="fetchRecordings()" style="font-size:11px;width:100px">
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="largest">Largest</option>
-          <option value="name">Name A-Z</option>
-        </select>
-        <div class="disk-indicator" id="diskIndicator">
-          <div class="disk-bar"><div class="disk-fill" id="diskFill"></div></div>
-          <span class="disk-text" id="diskText">—</span>
-        </div>
-      </div>
-    </div>
-    <div class="grid-area">
-      <div id="recList" class="rec-list"></div>
-    </div>
-  </div>
-
-  <!-- Platforms page -->
-  <div class="page" id="page-platforms">
-    <div class="topbar">
-      <span class="topbar-title">Platforms</span>
-      <span class="topbar-sub" id="platform-count"></span>
-      <div class="topbar-right">
-        <div class="search-wrap">
-          <span class="search-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input class="search-input" id="platSearchInput" placeholder="Search platforms…" oninput="debouncedFilterPlatforms()">
-        </div>
-      </div>
-    </div>
-    <div class="grid-area">
-      <div class="platforms-grid" id="platformsGrid"></div>
-    </div>
-  </div>
-
-</div><!-- /main -->
-
-<!-- Add Channel modal -->
-<div class="overlay" id="addOverlay" onclick="overlayClick(event,'addOverlay')">
-  <div class="modal">
-    <div class="modal-title">Add Channel</div>
-    <div class="field">
-      <div class="field-lbl">Stream URL</div>
-      <input class="field-input" id="addUrl" type="text" placeholder="https://twitch.tv/channel · youtube.com/live/…" oninput="detectPlatform()" onkeydown="if(event.key==='Enter')confirmAdd()">
-      <div class="platform-detect" id="addPlatformDetect"></div>
-    </div>
     <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">Quality</div>
-        <select class="field-input" id="addQuality">
-          <option value="">Global default</option>
+      <div class="field-group">
+        <label class="field-label">Quality</label>
+        <select class="custom-select" id="addQuality">
+          <option value="">Global Default</option>
           <option value="best">Best</option>
-          <option value="bestvideo+bestaudio">Best (split)</option>
           <option value="1080p">1080p</option>
           <option value="720p">720p</option>
           <option value="480p">480p</option>
-          <option value="worst">Lowest</option>
         </select>
       </div>
-      <div class="field">
-        <div class="field-lbl">Format</div>
-        <select class="field-input" id="addFormat">
-          <option value="">Global default</option>
+      <div class="field-group">
+        <label class="field-label">Format</label>
+        <select class="custom-select" id="addFormat">
+          <option value="">Global Default</option>
           <option value="mp4">MP4</option>
           <option value="mkv">MKV</option>
           <option value="ts">TS</option>
         </select>
       </div>
     </div>
-    <div class="modal-section">Options</div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-title">Monitor for live</div><div class="toggle-desc">Auto-start recording when stream goes live</div></div>
-      <button class="sm-toggle" id="addMonitoring" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-title">Record now</div><div class="toggle-desc">Start recording immediately</div></div>
-      <button class="sm-toggle off" id="addRecordNow" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Override global setting for this channel</div></div>
-      <button class="sm-toggle off" id="addAutoConvert" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="toggle-row" style="border-bottom:none">
-      <div class="toggle-info"><div class="toggle-title">Delete original</div><div class="toggle-desc">Remove source after MP4 conversion</div></div>
-      <button class="sm-toggle off" id="addDeleteOrig" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="modal-section">Authentication &amp; Network</div>
-    <div class="field">
-      <div class="field-lbl">Proxy URL</div>
-      <input class="field-input" id="addProxy" type="text" placeholder="http://user:pass@host:port or socks5://…">
-    </div>
-    <div class="field">
-      <div class="field-lbl">Cookies file</div>
-      <select class="field-input" id="addCookiesFile">
-        <option value="">None (global default)</option>
-      </select>
-    </div>
+
     <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">Username</div>
-        <input class="field-input" id="addChUsername" type="text" placeholder="For age-restricted sites">
+      <div class="field-group">
+        <label class="field-label">Max Streams to Keep</label>
+        <input class="text-input" type="number" id="addMaxStreams" min="0" max="100" value="0" placeholder="0 = unlimited">
       </div>
-      <div class="field">
-        <div class="field-lbl">Password</div>
-        <input class="field-input" id="addChPassword" type="password" placeholder="Site password">
+      <div class="field-group">
+        <label class="field-label">Max Duration (min)</label>
+        <input class="text-input" type="number" id="addMaxDuration" min="0" max="1440" value="0" placeholder="0 = unlimited">
       </div>
     </div>
-    <div class="field">
-      <div class="field-lbl">Extra yt-dlp args</div>
-      <input class="field-input" id="addExtraArgs" type="text" placeholder="e.g. --no-playlist --sub-langs en">
+
+    <div class="field-group">
+      <label class="field-label">Private Notes</label>
+      <input class="text-input" id="addNotes" placeholder="Optional notes…">
     </div>
-    <div class="field" style="margin-bottom:0">
-      <div class="field-lbl">Max recording duration (min) <span style="color:var(--muted);font-weight:400;text-transform:none">— 0 = no limit</span></div>
-      <input class="field-input" id="addMaxDuration" type="number" min="0" max="1440" value="0" placeholder="0">
-    </div>
-    <div class="field">
-      <div class="field-lbl">Notes</div>
-      <textarea class="field-input" id="addNotes" rows="2" placeholder="Private notes about this channel…" style="resize:vertical;min-height:48px"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
-      <button class="btn-primary" id="addConfirmBtn" onclick="confirmAdd()">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><circle cx="12" cy="12" r="5"/></svg>
-        Add Channel
-      </button>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
+      <button class="btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-primary" id="addConfirmBtn" onclick="confirmAdd()">Add Streamer</button>
     </div>
   </div>
 </div>
 
-<!-- Per-channel settings modal -->
-<div class="overlay" id="chSettingsOverlay" onclick="overlayClick(event,'chSettingsOverlay')">
-  <div class="modal wide">
-    <div class="modal-title" id="chSettingsTitle">Channel Settings</div>
+<!-- Modal: Channel Settings -->
+<div class="modal-overlay" id="chSettingsOverlay" onclick="if(event.target===this)closeChSettings()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title" id="chSettingsTitle">Channel Settings</span>
+      <button class="icon-action-btn" onclick="closeChSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
     <input type="hidden" id="chSettingsId">
 
     <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">Quality override</div>
-        <select class="field-input" id="chQuality">
-          <option value="">Global default</option>
+      <div class="field-group">
+        <label class="field-label">Quality Override</label>
+        <select class="custom-select" id="chQuality">
+          <option value="">Global Default</option>
           <option value="best">Best</option>
-          <option value="bestvideo+bestaudio">Best (split)</option>
           <option value="1080p">1080p</option>
           <option value="720p">720p</option>
           <option value="480p">480p</option>
-          <option value="worst">Lowest</option>
         </select>
       </div>
-      <div class="field">
-        <div class="field-lbl">Format override</div>
-        <select class="field-input" id="chFormat">
-          <option value="">Global default</option>
+      <div class="field-group">
+        <label class="field-label">Format Override</label>
+        <select class="custom-select" id="chFormat">
+          <option value="">Global Default</option>
           <option value="mp4">MP4</option>
           <option value="mkv">MKV</option>
           <option value="ts">TS</option>
@@ -883,163 +1318,44 @@ textarea.field-input{font-family:var(--sans);resize:vertical;min-height:52px}
       </div>
     </div>
 
-    <div class="modal-section">Per-channel overrides</div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-title">Monitor for live</div><div class="toggle-desc">Auto-start recording when this stream goes live</div></div>
-      <button class="sm-toggle" id="chMonitoring" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info"><div class="toggle-title">Auto-convert to MP4</div><div class="toggle-desc">Re-mux this channel's recordings to MP4 (stream copy)</div></div>
-      <button class="sm-toggle off" id="chAutoConvert" onclick="toggleSetting(this)"></button>
-    </div>
-    <div class="toggle-row" style="border-bottom:none">
-      <div class="toggle-info"><div class="toggle-title">Delete original after convert</div><div class="toggle-desc">Remove source file after successful conversion</div></div>
-      <button class="sm-toggle off" id="chDeleteOrig" onclick="toggleSetting(this)"></button>
-    </div>
-
-    <div class="modal-section">Authentication &amp; Network</div>
-    <div class="field">
-      <div class="field-lbl">Proxy URL <span style="color:var(--muted);font-weight:400;text-transform:none">(overrides global)</span></div>
-      <input class="field-input" id="chProxy" type="text" placeholder="http://user:pass@host:port or socks5://…">
-    </div>
-    <div class="field">
-      <div class="field-lbl">Cookies file <span style="color:var(--muted);font-weight:400;text-transform:none">(overrides global)</span></div>
-      <select class="field-input" id="chCookiesFile">
-        <option value="">None / use global</option>
-      </select>
-    </div>
     <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">Username</div>
-        <input class="field-input" id="chChUsername" type="text" placeholder="Site login username">
+      <div class="field-group">
+        <label class="field-label">Max Streams to Keep</label>
+        <input class="text-input" type="number" id="chMaxStreams" min="0" max="100" value="0">
       </div>
-      <div class="field">
-        <div class="field-lbl">Password</div>
-        <input class="field-input" id="chChPassword" type="password" placeholder="Site login password">
-      </div>
-    </div>
-    <div class="field">
-      <div class="field-lbl">Extra yt-dlp args</div>
-      <input class="field-input" id="chExtraArgs" type="text" placeholder="e.g. --no-playlist --sub-langs en">
-    </div>
-    <div class="toggle-row" style="border-bottom:none">
-      <div class="toggle-info"><div class="toggle-title">Max recording duration</div><div class="toggle-desc">Auto-stop after this many minutes (0 = use global, blank = no limit)</div></div>
-      <div class="settings-control" style="display:flex;align-items:center;gap:6px">
-        <input class="settings-input" type="number" id="chMaxDuration" min="0" max="1440" value="0" style="width:60px">
-        <span style="font-size:10px;color:var(--muted)">min</span>
+      <div class="field-group">
+        <label class="field-label">Max Duration (min)</label>
+        <input class="text-input" type="number" id="chMaxDuration" min="0" max="1440" value="0">
       </div>
     </div>
 
-    <div class="field">
-      <div class="field-lbl">Notes</div>
-      <textarea class="field-input" id="chNotes" rows="2" placeholder="Private notes…" style="resize:vertical;min-height:48px"></textarea>
+    <div class="field-group">
+      <label class="field-label">Notes</label>
+      <input class="text-input" id="chNotes" placeholder="Notes…">
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-danger" onclick="deleteChannel(document.getElementById('chSettingsId').value); closeChSettings();">Remove Channel</button>
-      <button class="btn-cancel" onclick="closeChSettings()">Cancel</button>
-      <button class="btn-primary" onclick="saveChSettings()">Save</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+      <button class="btn-ghost" onclick="deleteChannel(document.getElementById('chSettingsId').value); closeChSettings();" style="color:var(--red)">Delete Channel</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="closeChSettings()">Cancel</button>
+        <button class="btn-primary" onclick="saveChSettings()">Save</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Log drawer -->
+<!-- Log Drawer -->
 <div class="log-drawer" id="logDrawer">
-  <div class="log-hdr">
-    <span class="log-title-txt" id="logTitle">LOG</span>
-    <button class="log-close" onclick="closeLog()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="log-header">
+    <span id="logTitle">LOGS</span>
+    <button class="icon-action-btn" onclick="closeLog()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
-  <div class="log-body" id="logBody"></div>
+  <div class="log-content" id="logBody"></div>
 </div>
 
-<!-- Video preview -->
-<div class="preview-overlay" id="previewOverlay" onclick="if(event.target===this)closePreview()">
-  <button class="preview-close" onclick="closePreview()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <video class="preview-video" id="previewVideo" controls preload="metadata"></video>
-  <div class="preview-title" id="previewTitle"></div>
-</div>
-
-<!-- Welcome / Create Account modal -->
-<div class="overlay" id="welcomeOverlay" onclick="overlayClick(event,'welcomeOverlay')">
-  <div class="modal">
-    <div class="modal-title">Welcome to StreamRec</div>
-    <div class="welcome-hero">Create a local account to personalize your dashboard, or skip to use StreamRec as a guest.</div>
-    <div class="field">
-      <div class="field-lbl">Username</div>
-      <input class="field-input" id="welUsername" type="text" placeholder="Pick a username (2–32 chars)" maxlength="32" oninput="updatePwMatch()">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">Password</div>
-        <input class="field-input" id="welPassword" type="password" placeholder="At least 4 characters" oninput="updatePwMatch()">
-      </div>
-      <div class="field">
-        <div class="field-lbl">Confirm password</div>
-        <input class="field-input" id="welPasswordConfirm" type="password" placeholder="Re-enter password" oninput="updatePwMatch()">
-      </div>
-    </div>
-    <div class="pw-hint" id="welPwHint"></div>
-    <div class="modal-section">Profile picture (optional)</div>
-    <div class="avatar-picker-row">
-      <div class="account-pfp-fallback big" id="welAvatarPreview">?</div>
-      <div class="avatar-picker-actions">
-        <label class="file-label">
-          Choose image
-          <input type="file" id="welAvatarInput" accept="image/*" style="display:none" onchange="previewAvatarFile(this,'welAvatarPreview')">
-        </label>
-        <button class="btn-cancel" style="height:28px;font-size:11px" onclick="clearAvatarPreview('welAvatarPreview','welAvatarInput')">Clear</button>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="skipAccount()">Skip for now</button>
-      <button class="btn-primary" id="welConfirmBtn" onclick="createAccount()">Create Account</button>
-    </div>
-  </div>
-</div>
-
-<!-- Account Settings modal -->
-<div class="overlay" id="accountSettingsOverlay" onclick="overlayClick(event,'accountSettingsOverlay')">
-  <div class="modal">
-    <div class="modal-title">Account Settings</div>
-    <div class="avatar-picker-row" style="margin-bottom:18px">
-      <div class="account-pfp-fallback big" id="accSettingsAvatar">?</div>
-      <div class="avatar-picker-actions">
-        <label class="file-label">
-          Change picture
-          <input type="file" accept="image/*" style="display:none" onchange="uploadAccountAvatar(this)">
-        </label>
-        <button class="btn-cancel" style="height:28px;font-size:11px" onclick="removeAccountAvatar()">Remove picture</button>
-      </div>
-    </div>
-    <div class="field">
-      <div class="field-lbl">Username</div>
-      <input class="field-input" id="accSettingsUsername" type="text" maxlength="32">
-    </div>
-    <div class="modal-section">Change password</div>
-    <div class="field">
-      <div class="field-lbl">Current password</div>
-      <input class="field-input" id="accSettingsCurrentPw" type="password" placeholder="Required to change password">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <div class="field-lbl">New password</div>
-        <input class="field-input" id="accSettingsNewPw" type="password" placeholder="Leave blank to keep current" oninput="updateSettingsPwMatch()">
-      </div>
-      <div class="field">
-        <div class="field-lbl">Confirm new password</div>
-        <input class="field-input" id="accSettingsNewPwConfirm" type="password" placeholder="Re-enter new password" oninput="updateSettingsPwMatch()">
-      </div>
-    </div>
-    <div class="pw-hint" id="accSettingsPwHint">Leave blank to keep current password.</div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeAccountSettings()">Cancel</button>
-      <button class="btn-primary" onclick="saveAccountSettings()">Save</button>
-    </div>
-  </div>
-</div>
-
+<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -1047,121 +1363,281 @@ const API = '';
 let channels = {};
 let globalSettings = {};
 let activeLogChId = null;
-let selectMode = false;
-let selectedIds = new Set();
-let dragSrcId = null;
+let pollTimer = null;
+let pollInterval = 5000;
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-function navigate(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  const navEl = document.getElementById('nav-' + page);
-  if (navEl) navEl.classList.add('active');
-  if (page === 'settings') { loadSettings(); fetchYtdlpVersion(); }
-  if (page === 'recordings') { fetchRecordings(); fetchDisk(); }
-  if (page === 'platforms') fetchPlatforms();
+// ── Helpers ──
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  if (b < 1024) return b + ' B';
+  if (b < 1024**2) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1024**3) return (b/1024**2).toFixed(1) + ' MB';
+  return (b/1024**3).toFixed(2) + ' GB';
+}
+function fmtDur(start) {
+  if (!start) return '00:00:00';
+  const s = Math.max(0, Math.floor(Date.now()/1000 - start));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function timeAgo(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor(Date.now()/1000 - ts);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  return Math.floor(s/3600) + 'h ago';
 }
 
-// ── Platform detection ────────────────────────────────────────────────────────
-const PLAT_RE = [
-  [/youtube\.com|youtu\.be/i,  'YouTube',    '🔴'],
-  [/twitch\.tv/i,              'Twitch',     '🟣'],
-  [/tiktok\.com/i,             'TikTok',     '⚫'],
-  [/kick\.com/i,               'Kick',       '🟢'],
-  [/bilibili\.com/i,           'Bilibili',   '🔵'],
-  [/douyin\.com/i,             'Douyin',     '⚫'],
-  [/huya\.com/i,               'Huya',       '🟠'],
-  [/douyu\.com/i,              'Douyu',      '🟠'],
-  [/afreecatv\.com/i,          'Afreeca',    '🔵'],
-  [/sooplive\.co/i,            'Sooplive',   '🔵'],
-  [/naver\.com/i,              'Naver',      '🟢'],
-  [/nicovideo\.jp/i,           'Niconico',   '⚪'],
-  [/facebook\.com|fb\.watch/i, 'Facebook',   '🔵'],
-  [/instagram\.com/i,          'Instagram',  '🟣'],
-  [/twitter\.com|x\.com/i,     'Twitter/X',  '⚫'],
-  [/vimeo\.com/i,              'Vimeo',      '🔵'],
-  [/rumble\.com/i,             'Rumble',     '🟢'],
-  [/stripchat\.com/i,          'Stripchat',  '🟣'],
-  [/twitcasting\.tv/i,         'Twitcasting','🔵'],
-  [/bigo\.tv/i,                'Bigo',       '🟣'],
-  [/chaturbate\.com/i,         'Chaturbate', '🟠'],
-  [/cam4\.com/i,               'Cam4',       '🔴'],
-  [/myfreecams\.com/i,         'MyFreeCams', '🟢'],
-  [/camsoda\.com/i,            'CamSoda',    '🟠'],
-  [/bongacams\\.com/i,          'BongaCams',  '🟡'],
-  [/cammodels\\.com/i,          'CamModels',  '🟣'],
-  [/streamate\\.com/i,          'Streamate',  '🔴'],
-  [/flirt4free\\.com/i,         'Flirt4Free', '🟣'],
-  [/pandalive\\.co/i,           'Pandalive',  '🐼'],
-];
-
-function detectPlatform() {
-  const val = document.getElementById('addUrl').value.trim();
-  const el  = document.getElementById('addPlatformDetect');
-  if (!val) { el.innerHTML = ''; return; }
-  const m = PLAT_RE.find(([re]) => re.test(val));
-  if (m) {
-    el.innerHTML = `<span class="detect-badge">${m[1]}</span> detected`;
-  } else if (val.startsWith('http')) {
-    el.innerHTML = '<span style="color:var(--amber)">⚠ unknown — yt-dlp will attempt</span>';
-  } else { el.innerHTML = ''; }
+let toastTimer;
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = err ? 'var(--red)' : 'var(--border)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function platClass(plat) {
-  const p = (plat || '').toLowerCase();
-  if (p.includes('twitch'))   return 'plat-twitch';
-  if (p.includes('youtube'))  return 'plat-youtube';
-  if (p.includes('tiktok'))   return 'plat-tiktok';
-  if (p.includes('kick'))     return 'plat-kick';
-  if (p.includes('bilibili')) return 'plat-bilibili';
-  return 'plat-default';
+// ── Views ──
+function switchView(view) {
+  document.querySelectorAll('.h-nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-' + view)?.classList.add('active');
+  document.getElementById('view-' + view)?.classList.add('active');
+  if (view === 'settings') {
+    loadSettings();
+    fetchYtdlpVersion();
+    fetchDisk();
+  }
 }
 
+function switchSettingsSection(tab, btn) {
+  document.querySelectorAll('.settings-side-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.settings-pane-box').forEach(p => p.style.display = 'none');
+  if (btn) btn.classList.add('active');
+  const target = document.getElementById('spane-' + tab);
+  if (target) target.style.display = 'block';
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('active');
+}
+function setSwitch(id, on) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('active', !!on);
+}
+
+// ── Channels & Rendering ──
 function platEmoji(plat) {
   const p = (plat || '').toLowerCase();
-  if (p.includes('twitch'))    return '🎮';
-  if (p.includes('youtube'))   return '▶';
-  if (p.includes('tiktok'))    return '♪';
-  if (p.includes('kick'))      return '⚡';
-  if (p.includes('bilibili'))  return 'B';
-  if (p.includes('naver'))     return 'N';
-  return '●';
+  if (p.includes('twitch'))    return '🟣';
+  if (p.includes('youtube'))   return '🔴';
+  if (p.includes('tiktok'))    return '⚫';
+  if (p.includes('kick'))      return '🟢';
+  if (p.includes('bilibili'))  return '🔵';
+  return '📺';
 }
 
-// ── Add modal ─────────────────────────────────────────────────────────────────
+function renderCard(ch) {
+  const isRec = ch.rec_status === 'recording' || ch.rec_status === 'starting';
+  const isLive = ch.is_live;
+  const monitoring = ch.monitoring !== false;
+  const name = ch.display_name || ch.platform || 'Streamer';
+  const initials = name.charAt(0).toUpperCase();
+
+  return `
+  <div class="channel-card ${isRec ? 'recording' : isLive ? 'live' : ''}" id="card-${ch.id}">
+    <div class="card-top">
+      <div class="avatar-box">
+        ${ch.avatar ? `<img class="channel-avatar" src="${esc(ch.avatar)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+        <div class="channel-avatar" style="${ch.avatar ? 'display:none;' : ''}display:flex;align-items:center;justify-content:center;font-weight:700">${esc(initials)}</div>
+        <div class="platform-pill">${platEmoji(ch.platform)}</div>
+      </div>
+      <div class="card-header-info">
+        <div class="channel-name" title="${esc(name)}">${esc(name)}</div>
+        <div class="channel-subtitle">${esc(ch.platform)} · checked ${timeAgo(ch.last_checked)}</div>
+      </div>
+      <div class="status-badge ${isRec ? 'recording' : isLive ? 'live' : 'idle'}">
+        ${isRec ? '● RECORDING' : isLive ? '● LIVE' : monitoring ? 'MONITORING' : 'OFF'}
+      </div>
+    </div>
+
+    ${ch.stream_title ? `<div class="stream-title-text" title="${esc(ch.stream_title)}">${esc(ch.stream_title)}</div>` : ''}
+
+    ${isRec ? `
+      <div class="metrics-bar">
+        <span class="metrics-pill">⏱️ <span class="ch-dur">${fmtDur(ch.rec_started)}</span></span>
+        <span class="metrics-pill">⚡ ${esc(ch.rec_speed || '—')}</span>
+        <span class="metrics-pill">💾 ${fmtBytes(ch.rec_bytes)}</span>
+      </div>
+    ` : ''}
+
+    <div class="card-actions">
+      <div class="actions-left">
+        <div class="switch-control ${monitoring ? 'active' : ''}" title="Toggle Auto-Monitoring" onclick="toggleMonitoring('${ch.id}')">
+          <div class="switch-knob"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);font-weight:600">${monitoring ? 'Active' : 'Paused'}</span>
+      </div>
+      <div class="actions-right">
+        ${isRec ? `
+          <button class="icon-action-btn danger" title="Stop Recording" onclick="stopChannel('${ch.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          </button>
+        ` : `
+          <button class="icon-action-btn rec-btn" title="Start Recording" onclick="recordChannel('${ch.id}')">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="12" r="6"/></svg>
+          </button>
+        `}
+        <button class="icon-action-btn" title="View Logs" onclick="openLog('${ch.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="9" y2="18"/></svg>
+        </button>
+        <button class="icon-action-btn" title="Settings" onclick="openChSettings('${ch.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderChannels() {
+  const grid = document.getElementById('channelsGrid');
+  const sortBy = document.getElementById('channelSort')?.value || 'custom';
+  const list = Object.values(channels).sort((a,b) => {
+    switch(sortBy) {
+      case 'name_asc': return (a.display_name||'').localeCompare(b.display_name||'');
+      case 'name_desc': return (b.display_name||'').localeCompare(a.display_name||'');
+      case 'platform': return (a.platform||'').localeCompare(b.platform||'');
+      case 'recent': return b.created_at - a.created_at;
+      case 'live_first': return ((b.is_live||0)-(a.is_live||0)) || (b.created_at - a.created_at);
+      default: return (a.sort_order ?? 9999) - (b.sort_order ?? 9999);
+    }
+  });
+
+  const liveCount = list.filter(c => c.is_live || c.rec_status === 'recording').length;
+  document.getElementById('live-indicator-dot').style.display = liveCount > 0 ? 'inline-block' : 'none';
+
+  if (!list.length) {
+    grid.innerHTML = `
+      <div class="empty-view" style="grid-column: 1 / -1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <span style="font-size:15px;font-weight:600">No channels added yet</span>
+        <span style="font-size:12px;color:var(--text-muted)">Click "Add Channel" above to start recording your favorite streams.</span>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = list.map(renderCard).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('channelSearch').value.toLowerCase();
+  document.querySelectorAll('.channel-card').forEach(card => {
+    const id = card.id.replace('card-', '');
+    const ch = channels[id];
+    if (!ch) return;
+    const text = ((ch.display_name||'') + ' ' + (ch.platform||'') + ' ' + (ch.stream_title||'')).toLowerCase();
+    card.style.display = text.includes(q) ? '' : 'none';
+  });
+}
+
+// ── API Operations ──
+async function fetchChannels() {
+  try {
+    const res = await fetch(`${API}/api/channels`);
+    if (!res.ok) return;
+    const list = await res.json();
+    channels = {};
+    list.forEach(c => channels[c.id] = c);
+    renderChannels();
+  } catch {}
+}
+
+async function fetchSlots() {
+  try {
+    const res = await fetch(`${API}/api/health`);
+    const d = await res.json();
+    const el = document.getElementById('slot-indicator');
+    if (el) el.textContent = `${d.active || 0}/${d.pi_mode ? 3 : 6} slots`;
+  } catch {}
+}
+
+async function fetchDisk() {
+  try {
+    const res = await fetch(`${API}/api/disk`);
+    const d = await res.json();
+    const el = document.getElementById('diskText');
+    if (el) el.textContent = `${fmtBytes(d.recordings_bytes)} used · ${fmtBytes(d.free)} free`;
+  } catch {}
+}
+
+async function recordChannel(id) {
+  try {
+    const res = await fetch(`${API}/api/channels/${id}/record`, { method: 'POST' });
+    if (!res.ok) {
+      toast('Channel offline or unavailable', true);
+      return;
+    }
+    toast('Recording started');
+    fetchChannels();
+  } catch (e) { toast('Error: ' + e.message, true); }
+}
+
+async function stopChannel(id) {
+  try {
+    await fetch(`${API}/api/channels/${id}/stop`, { method: 'POST' });
+    toast('Stopping stream…');
+    fetchChannels();
+  } catch (e) { toast('Error: ' + e.message, true); }
+}
+
+async function toggleMonitoring(id) {
+  const ch = channels[id];
+  if (!ch) return;
+  const next = !ch.monitoring;
+  try {
+    await fetch(`${API}/api/channels/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monitoring: next })
+    });
+    fetchChannels();
+  } catch {}
+}
+
+async function deleteChannel(id) {
+  if (!confirm('Remove this channel?')) return;
+  try {
+    await fetch(`${API}/api/channels/${id}`, { method: 'DELETE' });
+    delete channels[id];
+    renderChannels();
+    toast('Channel removed');
+  } catch (e) { toast('Error: ' + e.message, true); }
+}
+
+// ── Modals & Add ──
 function openAddModal() {
   document.getElementById('addOverlay').classList.add('open');
-  // Pre-check "Record now" if global setting is on
-  const recNow = document.getElementById('addRecordNow');
-  if (globalSettings.record_on_add) { recNow.classList.remove('off'); }
-  else { recNow.classList.add('off'); }
-  populateCookiesSelects();
-  setTimeout(() => document.getElementById('addUrl').focus(), 80);
+  setTimeout(() => document.getElementById('addUrl').focus(), 60);
 }
 function closeAddModal() {
   document.getElementById('addOverlay').classList.remove('open');
   document.getElementById('addUrl').value = '';
-  document.getElementById('addPlatformDetect').innerHTML = '';
-  document.getElementById('addProxy').value = '';
-  document.getElementById('addChUsername').value = '';
-  document.getElementById('addChPassword').value = '';
-  document.getElementById('addExtraArgs').value = '';
-  document.getElementById('addMaxDuration').value = 0;
-  document.getElementById('addNotes').value = '';
-  document.getElementById('addCookiesFile').value = '';
-  document.getElementById('addQuality').value = '';
-  document.getElementById('addFormat').value  = '';
-  // Reset toggles to their natural defaults
-  setToggle('addMonitoring',  true);
-  setToggle('addRecordNow',   false);
-  setToggle('addAutoConvert', false);
-  setToggle('addDeleteOrig',  false);
 }
-function overlayClick(e, id) {
-  if (e.target === document.getElementById(id)) {
-    document.getElementById(id).classList.remove('open');
-  }
+
+function detectPlatform() {
+  const u = document.getElementById('addUrl').value.toLowerCase();
+  const el = document.getElementById('addPlatformDetect');
+  if (u.includes('twitch.tv')) el.textContent = 'Detected: Twitch 🟣';
+  else if (u.includes('youtube.com') || u.includes('youtu.be')) el.textContent = 'Detected: YouTube 🔴';
+  else if (u.includes('tiktok.com')) el.textContent = 'Detected: TikTok ⚫';
+  else if (u.includes('kick.com')) el.textContent = 'Detected: Kick 🟢';
+  else if (u.includes('bilibili.com')) el.textContent = 'Detected: Bilibili 🔵';
+  else el.textContent = '';
 }
 
 async function confirmAdd() {
@@ -1175,671 +1651,196 @@ async function confirmAdd() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url,
-        quality:          document.getElementById('addQuality').value,
-        format:           document.getElementById('addFormat').value,
-        monitoring:       !document.getElementById('addMonitoring').classList.contains('off'),
-        record_now:       !document.getElementById('addRecordNow').classList.contains('off'),
-        auto_convert_mp4: !document.getElementById('addAutoConvert').classList.contains('off'),
-        delete_original:  !document.getElementById('addDeleteOrig').classList.contains('off'),
-        proxy:            document.getElementById('addProxy').value.trim(),
-        cookies_file:     document.getElementById('addCookiesFile').value,
-        username:         document.getElementById('addChUsername').value.trim(),
-        password:         document.getElementById('addChPassword').value,
-        extra_args:       document.getElementById('addExtraArgs').value.trim(),
-        max_duration:     parseInt(document.getElementById('addMaxDuration').value) || 0,
-        notes:            document.getElementById('addNotes').value.trim(),
+        quality: document.getElementById('addQuality').value,
+        format: document.getElementById('addFormat').value,
+        max_streams: parseInt(document.getElementById('addMaxStreams').value) || 0,
+        max_duration: parseInt(document.getElementById('addMaxDuration').value) || 0,
+        notes: document.getElementById('addNotes').value.trim(),
+        monitoring: true,
       })
     });
     if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    toast(`Channel added · ${data.platform}`);
+    const d = await res.json();
+    toast(`Added ${d.display_name || d.platform}`);
     closeAddModal();
     fetchChannels();
   } catch(e) {
-    toast('Error: ' + e.message, true);
+    toast('Failed to add channel: ' + e.message, true);
   } finally {
     btn.disabled = false;
   }
 }
 
-// ── Per-channel settings modal ────────────────────────────────────────────────
-function openChSettings(chId) {
-  const ch = channels[chId];
+function openChSettings(id) {
+  const ch = channels[id];
   if (!ch) return;
-  document.getElementById('chSettingsId').value = chId;
-  document.getElementById('chSettingsTitle').textContent = ch.display_name || ch.platform || 'Channel Settings';
+  document.getElementById('chSettingsId').value = id;
+  document.getElementById('chSettingsTitle').textContent = ch.display_name || 'Channel Settings';
   document.getElementById('chQuality').value = ch.quality || '';
-  document.getElementById('chFormat').value  = ch.format  || '';
-  setToggle('chMonitoring',  ch.monitoring !== false);
-  setToggle('chAutoConvert', !!ch.auto_convert_mp4);
-  setToggle('chDeleteOrig',  !!ch.delete_original);
-  document.getElementById('chProxy').value = ch.proxy || '';
-  document.getElementById('chChUsername').value = ch.ch_username || '';
-  document.getElementById('chChPassword').value = ch.ch_password || '';
-  document.getElementById('chExtraArgs').value = ch.extra_args || '';
+  document.getElementById('chFormat').value = ch.format || '';
+  document.getElementById('chMaxStreams').value = ch.max_streams || 0;
   document.getElementById('chMaxDuration').value = ch.max_duration || 0;
   document.getElementById('chNotes').value = ch.notes || '';
-  // Populate cookies dropdown
-  populateCookiesSelects().then(() => {
-    document.getElementById('chCookiesFile').value = ch.cookies_file || '';
-  });
   document.getElementById('chSettingsOverlay').classList.add('open');
 }
 function closeChSettings() {
   document.getElementById('chSettingsOverlay').classList.remove('open');
 }
 async function saveChSettings() {
-  const chId = document.getElementById('chSettingsId').value;
-  const body = {
-    quality:          document.getElementById('chQuality').value || null,
-    format:           document.getElementById('chFormat').value  || null,
-    monitoring:       !document.getElementById('chMonitoring').classList.contains('off'),
-    auto_convert_mp4: !document.getElementById('chAutoConvert').classList.contains('off'),
-    delete_original:  !document.getElementById('chDeleteOrig').classList.contains('off'),
-    proxy:            document.getElementById('chProxy').value.trim() || null,
-    cookies_file:     document.getElementById('chCookiesFile').value || null,
-    username:         document.getElementById('chChUsername').value.trim() || null,
-    password:         document.getElementById('chChPassword').value || null,
-    extra_args:       document.getElementById('chExtraArgs').value.trim() || null,
-    max_duration:     parseInt(document.getElementById('chMaxDuration').value) || 0,
-    notes:            document.getElementById('chNotes').value.trim() || null,
-  };
-  // remove nulls
-  Object.keys(body).forEach(k => body[k] === null && delete body[k]);
+  const id = document.getElementById('chSettingsId').value;
   try {
-    await fetch(`${API}/api/channels/${chId}`, {
-      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    await fetch(`${API}/api/channels/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quality: document.getElementById('chQuality').value || null,
+        format: document.getElementById('chFormat').value || null,
+        max_streams: parseInt(document.getElementById('chMaxStreams').value) || 0,
+        max_duration: parseInt(document.getElementById('chMaxDuration').value) || 0,
+        notes: document.getElementById('chNotes').value.trim() || null,
+      })
     });
     toast('Settings saved');
     closeChSettings();
     fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
+  } catch (e) { toast('Error: ' + e.message, true); }
 }
 
-// ── Toggle helpers ─────────────────────────────────────────────────────────────
-function toggleSetting(btn) { btn.classList.toggle('off'); }
-function setToggle(id, on) {
-  const el = document.getElementById(id);
-  if (on) el.classList.remove('off'); else el.classList.add('off');
-}
-
-// ── Channel actions ──────────────────────────────────────────────────────────
-async function recordChannel(chId) {
-  try {
-    const res = await fetch(`${API}/api/channels/${chId}/record`, { method: 'POST' });
-    if (!res.ok) {
-      const body = await res.text();
-      if (res.status === 409 || body.includes('offline')) {
-        toast('Channel is offline', true);
-      } else {
-        toast('Error: ' + body, true);
-      }
-      return;
-    }
-    toast('Recording started');
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function stopChannel(chId) {
-  try {
-    await fetch(`${API}/api/channels/${chId}/stop`, { method: 'POST' });
-    toast('Stopping…');
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function killChannel(chId) {
-  if (!confirm('Force kill this recording? This may corrupt the file.')) return;
-  try {
-    await fetch(`${API}/api/channels/${chId}/kill`, { method: 'POST' });
-    toast('Recording killed');
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function deleteChannel(chId) {
-  if (!confirm(`Remove channel "${channels[chId]?.display_name || chId}"?`)) return;
-  try {
-    await fetch(`${API}/api/channels/${chId}`, { method: 'DELETE' });
-    delete channels[chId];
-    renderChannels();
-    toast('Channel removed');
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function refreshChannel(chId) {
-  toast('Refreshing metadata…');
-  try {
-    await fetch(`${API}/api/channels/${chId}/refresh`, { method: 'POST' });
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function toggleMonitoring(chId) {
-  const ch = channels[chId];
-  if (!ch) return;
-  const newVal = !ch.monitoring;
-  try {
-    await fetch(`${API}/api/channels/${chId}`, {
-      method: 'PATCH', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ monitoring: newVal })
-    });
-    fetchChannels();
-  } catch(e) {}
-}
-
-// ── Log ───────────────────────────────────────────────────────────────────────
-let activeRecLogId = null;
+// ── Logs ──
 function openLog(chId) {
   activeLogChId = chId;
-  activeRecLogId = null;
   const ch = channels[chId];
-  document.getElementById('logTitle').textContent =
-    `LOG · ${(ch?.display_name || ch?.platform || chId).toUpperCase()}`;
-  document.getElementById('logDrawer').classList.add('open');
-  refreshLog();
-}
-function openRecLog(recId) {
-  activeRecLogId = recId;
-  activeLogChId = null;
-  document.getElementById('logTitle').textContent = `LOG · ${recId}`;
+  document.getElementById('logTitle').textContent = `LOGS · ${(ch?.display_name || chId).toUpperCase()}`;
   document.getElementById('logDrawer').classList.add('open');
   refreshLog();
 }
 function closeLog() {
   document.getElementById('logDrawer').classList.remove('open');
   activeLogChId = null;
-  activeRecLogId = null;
 }
 async function refreshLog() {
+  if (!activeLogChId) return;
+  const ch = channels[activeLogChId];
+  const recId = ch?.rec_id;
   const body = document.getElementById('logBody');
-  if (activeLogChId) {
-    const ch = channels[activeLogChId];
-    const recId = ch?.rec_id;
-    if (!recId) {
-      body.innerHTML = '<div class="log-line" style="color:var(--muted)">No active recording for this channel.</div>';
-      return;
-    }
-    try {
-      const res = await fetch(`${API}/api/recordings/${recId}/log`);
-      const data = await res.json();
-      const lines = data.log || [];
-      body.innerHTML = lines.length
-        ? lines.map(l => `<div class="log-line${l.toLowerCase().includes('error')?' err':''}">${esc(l)}</div>`).join('')
-        : '<div class="log-line" style="color:var(--muted)">No output yet…</div>';
-      body.scrollTop = body.scrollHeight;
-    } catch {}
-  } else if (activeRecLogId) {
-    try {
-      const res = await fetch(`${API}/api/recordings/${activeRecLogId}/log`);
-      const data = await res.json();
-      const lines = data.log || [];
-      body.innerHTML = lines.length
-        ? lines.map(l => `<div class="log-line${l.toLowerCase().includes('error')?' err':''}">${esc(l)}</div>`).join('')
-        : '<div class="log-line" style="color:var(--muted)">No log output.</div>';
-      body.scrollTop = body.scrollHeight;
-    } catch {}
-  } else {
-    body.innerHTML = '<div class="log-line" style="color:var(--muted)">No active recording.</div>';
-  }
-}
-
-// ── Debounce helper ───────────────────────────────────────────────────────────
-function debounce(fn, ms) {
-  let timeoutId;
-  return function(...args) { const context = this; clearTimeout(timeoutId); timeoutId = setTimeout(() => fn.apply(context, args), ms); };
-}
-
-// ── Render ─────────────────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function fmtBytes(b) {
-  if (!b) return '—';
-  if (b < 1024) return b + ' B';
-  if (b < 1024**2) return (b/1024).toFixed(1) + ' KiB';
-  if (b < 1024**3) return (b/1024**2).toFixed(1) + ' MiB';
-  return (b/1024**3).toFixed(2) + ' GiB';
-}
-function fmtDur(start) {
-  if (!start) return '—';
-  const s = Math.floor(Date.now()/1000 - start);
-  if (s < 0) return '00:00:00';
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-}
-function timeAgo(ts) {
-  if (!ts) return 'never';
-  const s = Math.floor(Date.now()/1000 - ts);
-  if (s < 60) return s + 's ago';
-  if (s < 3600) return Math.floor(s/60) + 'm ago';
-  return Math.floor(s/3600) + 'h ago';
-}
-
-function renderCard(ch) {
-  const isRecording = ch.rec_status === 'recording' || ch.rec_status === 'starting';
-  const monitoring  = ch.monitoring !== false;
-  const initials    = (ch.display_name || ch.platform || '?').charAt(0).toUpperCase();
-  const name        = ch.display_name || ch.platform || 'Unknown';
-  const username    = ch.username ? '@' + ch.username : '';
-  const pc          = platClass(ch.platform);
-  const pe          = platEmoji(ch.platform);
-  const statusCls   = ch.is_live || isRecording ? 'live' : (monitoring ? 'monitoring' : 'off');
-
-  return `
-  <div class="ch-card card-new ${selectedIds.has(ch.id) ? 'selected' : ''}"
-       id="card-${ch.id}" draggable="true"
-       ondragstart="onDragStart(event,'${ch.id}')" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)"
-       ondrop="onDrop(event,'${ch.id}')" ondragend="onDragEnd(event)"
-       onclick="onCardClick(event,'${ch.id}')">
-    <div class="select-checkbox"></div>
-    <div class="cn-left">
-      <div class="cn-avatar-wrap">
-        ${ch.avatar
-          ? `<img class="cn-avatar" src="${esc(ch.avatar)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-          : ''}
-        <div class="cn-avatar-fb" style="${ch.avatar ? 'display:none' : ''}">${esc(initials)}</div>
-        <div class="cn-platform ${pc}" title="${esc(ch.platform)}">${esc(pe)}</div>
-      </div>
-    </div>
-    <div class="cn-center">
-      <div class="cn-toprow">
-        <div class="cn-name" title="${esc(name)}">${esc(name)}</div>
-        <div class="cn-status ${statusCls}">
-          <span class="cn-stat-dot"></span>
-          ${isRecording ? 'RECORDING' : ch.is_live ? 'LIVE' : monitoring ? 'monitoring' : 'paused'}
-        </div>
-      </div>
-      ${ch.stream_title ? `<div class="cn-title" title="${esc(ch.stream_title)}">${esc(ch.stream_title)}</div>` : ''}
-      <div class="cn-meta">
-        ${username ? `<span>${esc(username)}</span>` : ''}
-        <span>${esc(ch.platform)}</span>
-        ${isRecording ? `<span class="cn-dur">${fmtDur(ch.rec_started)}${ch.max_duration ? ' / ' + ch.max_duration + 'm' : ''}</span>` : ''}
-        ${isRecording ? `<span>${esc(ch.rec_speed || '—')}</span>` : ''}
-        ${isRecording ? `<span>${fmtBytes(ch.rec_bytes)}</span>` : ''}
-        <span class="cn-checked">checked ${timeAgo(ch.last_checked)}</span>
-      </div>
-      ${ch.proxy || ch.cookies_file || ch.notes ? `<div class="cn-tags">
-        ${ch.proxy ? `<span class="cn-tag proxy">proxy</span>` : ''}
-        ${ch.cookies_file ? `<span class="cn-tag cookies">cookies</span>` : ''}
-        ${ch.notes ? `<span class="cn-tag notes" title="${esc(ch.notes)}">notes</span>` : ''}
-      </div>` : ''}
-    </div>
-    <div class="cn-right">
-      <button class="cn-toggle-btn" title="${monitoring ? 'Monitoring ON — click to pause' : 'Monitoring OFF — click to enable'}" onclick="event.stopPropagation();toggleMonitoring('${ch.id}')">
-        <div class="cn-toggle-knob ${monitoring ? '' : 'off'}"></div>
-      </button>
-      ${isRecording
-        ? `<button class="cn-act danger" title="Stop" onclick="event.stopPropagation();stopChannel('${ch.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
-           <button class="cn-act danger" title="Kill" onclick="event.stopPropagation();killChannel('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`
-        : `<button class="cn-act rec" title="Record" onclick="event.stopPropagation();recordChannel('${ch.id}')"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="12" r="6"/></svg></button>`
-      }
-      <button class="cn-act" title="Log" onclick="event.stopPropagation();openLog('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="9" y2="18"/></svg></button>
-      <button class="cn-act" title="Settings" onclick="event.stopPropagation();openChSettings('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-      <button class="cn-act" title="Refresh" onclick="event.stopPropagation();refreshChannel('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
-    </div>
-    ${isRecording ? `<div class="cn-progress"><div class="cn-progress-fill${ch.rec_speed === '0B/s' ? ' stalled' : ' pulse'}" style="width:${ch.rec_bytes > 0 ? '100%' : '2%'}"></div></div>` : ''}
-  </div>`;
-}
-
-function renderChannels() {
-  const grid = document.getElementById('channelsGrid');
-  const sortBy = document.getElementById('channelSort')?.value || 'custom';
-  const list = Object.values(channels).sort((a,b) => {
-    switch(sortBy) {
-      case 'name_asc': return (a.display_name||'').localeCompare(b.display_name||'');
-      case 'name_desc': return (b.display_name||'').localeCompare(a.display_name||'');
-      case 'platform': return (a.platform||'').localeCompare(b.platform||'') || b.created_at - a.created_at;
-      case 'recent': return b.created_at - a.created_at;
-      case 'last_checked': return (b.last_checked||0) - (a.last_checked||0);
-      case 'live_first': return ((b.is_live||0)-(a.is_live||0)) || b.created_at - a.created_at;
-      default:
-        const sa = a.sort_order ?? 9999, sb = b.sort_order ?? 9999;
-        if (sa !== sb) return sa - sb;
-        return b.created_at - a.created_at;
-    }
-  });
-  const liveCount = list.filter(c => c.is_live || c.rec_status === 'recording').length;
-
-  document.getElementById('channel-count').textContent =
-    list.length + ' channel' + (list.length !== 1 ? 's' : '') +
-    (liveCount ? ` · ${liveCount} live` : '');
-
-  const badge = document.getElementById('live-badge');
-  badge.style.display = liveCount > 0 ? '' : 'none';
-
-  if (!list.length) {
-    grid.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <rect x="2" y="7" width="20" height="14" rx="2"/>
-        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-        <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-      </svg>
-      <p>No channels yet</p>
-      <small>Click ADD to start monitoring a stream</small>
-    </div>`;
+  if (!recId) {
+    body.innerHTML = '<div style="color:var(--text-muted)">No active recording session for this channel.</div>';
     return;
   }
-  grid.innerHTML = list.map(renderCard).join('');
-  if (selectMode) grid.classList.add('select-mode'); else grid.classList.remove('select-mode');
-  updateBulkBar();
-}
-
-function filterCards() {
-  const q = document.getElementById('searchInput').value.toLowerCase();
-  document.querySelectorAll('.ch-card').forEach(card => {
-    const id = card.id.replace('card-', '');
-    const ch = channels[id];
-    if (!ch) return;
-    const hay = (
-      (ch.url || '') + ' ' + (ch.platform || '') + ' ' +
-      (ch.display_name || '') + ' ' + (ch.username || '') + ' ' +
-      (ch.stream_title || '') + ' ' + (ch.notes || '')
-    ).toLowerCase();
-    card.style.display = hay.includes(q) ? '' : 'none';
-  });
-}
-const debouncedFilterCards = debounce(filterCards, 150);
-
-// ── Slots indicator ───────────────────────────────────────────────────────────
-let maxSlots = 6;
-async function fetchSlots() {
   try {
-    const res = await fetch(`${API}/api/health`);
-    const d = await res.json();
-    maxSlots = d.pi_mode ? 3 : 6;
-    const el = document.getElementById('slot-indicator');
-    if (el) el.textContent = d.active ? `${d.active}/${maxSlots} slots` : '';
+    const res = await fetch(`${API}/api/recordings/${recId}/log`);
+    const data = await res.json();
+    const lines = data.log || [];
+    body.innerHTML = lines.map(l => `<div class="log-line${l.toLowerCase().includes('error')?' err':''}">${esc(l)}</div>`).join('');
+    body.scrollTop = body.scrollHeight;
   } catch {}
 }
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
-async function fetchChannels() {
-  try {
-    const res = await fetch(`${API}/api/channels`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const list = await res.json();
-    channels = {};
-    list.forEach(c => channels[c.id] = c);
-    renderChannels();
-    _apiErrCount = 0;
-  } catch (e) {
-    _apiErrCount = (_apiErrCount || 0) + 1;
-    if (_apiErrCount <= 3) toast('Failed to load channels', true);
-  }
-}
-
-// ── Settings ──────────────────────────────────────────────────────────────────
+// ── Settings ──
 async function loadSettings() {
   try {
     const res = await fetch(`${API}/api/settings`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const s = await res.json();
     globalSettings = s;
-    setToggle('s-pi-mode',          !!s.pi_mode);
-    document.getElementById('s-interval').value   = s.monitor_interval ?? 60;
-    document.getElementById('s-quality').value    = s.default_quality  ?? 'best';
-    document.getElementById('s-format').value     = s.default_format   ?? 'mp4';
-    setToggle('s-record-on-add',    !!s.record_on_add);
-    setToggle('s-auto-convert',     !!s.auto_convert_mp4);
-    setToggle('s-delete-original',  !!s.delete_original);
-    setToggle('s-auto-retry',       s.auto_retry !== false);
-    document.getElementById('s-max-retries').value  = s.max_retries ?? 5;
-    document.getElementById('s-retry-delay').value  = s.retry_delay ?? 15;
-    document.getElementById('s-proxy').value        = s.proxy ?? '';
-    document.getElementById('s-extra-args').value   = s.extra_args ?? '';
+    setSwitch('s-pi-mode', !!s.pi_mode);
+    document.getElementById('s-interval').value = s.monitor_interval ?? 60;
+    setSwitch('s-record-on-add', !!s.record_on_add);
     document.getElementById('s-retention-days').value = s.retention_days ?? 0;
-    document.getElementById('s-max-duration').value   = s.max_duration ?? 0;
-    document.getElementById('s-webhook-url').value    = s.webhook_url ?? '';
-    setToggle('s-auto-stop-stalled', !!s.auto_stop_stalled);
-    await populateCookiesSelects();
-    document.getElementById('s-cookies-file').value = s.cookies_file ?? '';
-    loadCookiesList();
-  } catch (e) {
-    toast('Failed to load settings', true);
-  }
+    document.getElementById('s-quality').value = s.default_quality ?? 'best';
+    document.getElementById('s-format').value = s.default_format ?? 'mp4';
+    setSwitch('s-auto-convert', !!s.auto_convert_mp4);
+    setSwitch('s-delete-original', !!s.delete_original);
+    document.getElementById('s-proxy').value = s.proxy ?? '';
+    document.getElementById('s-extra-args').value = s.extra_args ?? '';
+    setSwitch('s-auto-retry', s.auto_retry !== false);
+    document.getElementById('s-max-retries').value = s.max_retries ?? 5;
+    document.getElementById('s-retry-delay').value = s.retry_delay ?? 15;
+    document.getElementById('s-webhook-url').value = s.webhook_url ?? '';
+    setSwitch('s-auto-stop-stalled', !!s.auto_stop_stalled);
+  } catch {}
 }
 
 async function saveSettings() {
   const body = {
-    pi_mode:          !document.getElementById('s-pi-mode').classList.contains('off'),
+    pi_mode: document.getElementById('s-pi-mode').classList.contains('active'),
     monitor_interval: parseInt(document.getElementById('s-interval').value) || 60,
-    default_quality:  document.getElementById('s-quality').value,
-    default_format:   document.getElementById('s-format').value,
-    record_on_add:    !document.getElementById('s-record-on-add').classList.contains('off'),
-    auto_convert_mp4: !document.getElementById('s-auto-convert').classList.contains('off'),
-    delete_original:  !document.getElementById('s-delete-original').classList.contains('off'),
-    auto_retry:       !document.getElementById('s-auto-retry').classList.contains('off'),
-    max_retries:      parseInt(document.getElementById('s-max-retries').value) || 5,
-    retry_delay:      parseInt(document.getElementById('s-retry-delay').value) || 15,
-    proxy:            document.getElementById('s-proxy').value.trim(),
-    cookies_file:     document.getElementById('s-cookies-file').value,
-    extra_args:       document.getElementById('s-extra-args').value.trim(),
-    retention_days:   parseInt(document.getElementById('s-retention-days').value) || 0,
-    max_duration:     parseInt(document.getElementById('s-max-duration').value) || 0,
-    webhook_url:      document.getElementById('s-webhook-url').value.trim(),
-    auto_stop_stalled: !document.getElementById('s-auto-stop-stalled').classList.contains('off'),
+    record_on_add: document.getElementById('s-record-on-add').classList.contains('active'),
+    retention_days: parseInt(document.getElementById('s-retention-days').value) || 0,
+    default_quality: document.getElementById('s-quality').value,
+    default_format: document.getElementById('s-format').value,
+    auto_convert_mp4: document.getElementById('s-auto-convert').classList.contains('active'),
+    delete_original: document.getElementById('s-delete-original').classList.contains('active'),
+    proxy: document.getElementById('s-proxy').value.trim(),
+    extra_args: document.getElementById('s-extra-args').value.trim(),
+    auto_retry: document.getElementById('s-auto-retry').classList.contains('active'),
+    max_retries: parseInt(document.getElementById('s-max-retries').value) || 5,
+    retry_delay: parseInt(document.getElementById('s-retry-delay').value) || 15,
+    webhook_url: document.getElementById('s-webhook-url').value.trim(),
+    auto_stop_stalled: document.getElementById('s-auto-stop-stalled').classList.contains('active'),
   };
   try {
     await fetch(`${API}/api/settings`, {
-      method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
-    toast('Settings saved');
-    // Re-fetch poll interval in case Pi mode was toggled
-    initPolling();
+    toast('Settings saved successfully');
     fetchSlots();
-  } catch(e) { toast('Error: ' + e.message, true); }
+  } catch (e) { toast('Error saving: ' + e.message, true); }
 }
 
-// ── yt-dlp version management ────────────────────────────────────────────────
+async function testWebhook() {
+  const btn = document.getElementById('btnTestWebhook');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${API}/api/settings/test-webhook`, { method: 'POST' });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    toast('Test notification sent! 🔔');
+  } catch (e) {
+    toast('Webhook error: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Test Webhook';
+  }
+}
+
 async function fetchYtdlpVersion() {
-  const el = document.getElementById('ytdlpVersion');
   try {
     const res = await fetch(`${API}/api/ytdlp-version`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    el.textContent = `Installed: ${data.current}`;
-    if (data.latest && data.latest !== data.current) {
-      el.textContent += ` (latest: ${data.latest})`;
-    } else if (data.latest) {
-      el.textContent += ' ✓ up to date';
-    }
-  } catch (e) {
-    el.textContent = 'Failed to load version';
-  }
+    const d = await res.json();
+    document.getElementById('ytdlpVersion').textContent = `Version: ${d.current} ${d.latest === d.current ? '(latest)' : ''}`;
+  } catch {}
 }
 
 async function updateYtdlp() {
   const btn = document.getElementById('ytdlpUpdateBtn');
-  const el = document.getElementById('ytdlpVersion');
   btn.disabled = true;
-  btn.textContent = 'Updating...';
-  el.textContent = 'Updating yt-dlp...';
-
+  btn.textContent = 'Updating…';
   try {
     const res = await fetch(`${API}/api/ytdlp-update`, { method: 'POST' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.success) {
-      toast(`yt-dlp updated to ${data.version}`);
-    } else {
-      toast(data.error || 'Update failed', true);
-    }
-    await fetchYtdlpVersion();
-  } catch (e) {
-    toast('Update failed: ' + e.message, true);
+    const d = await res.json();
+    toast(d.success ? `Updated to ${d.version}` : 'Update failed', !d.success);
+    fetchYtdlpVersion();
+  } catch(e) {
+    toast('Update failed', true);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Update yt-dlp';
   }
 }
 
-// ── Recordings page ───────────────────────────────────────────────────────────
-async function fetchRecordings() {
-  try {
-    const res = await fetch(`${API}/api/recordings`);
-    let list = await res.json();
-    // Filter
-    const filter = document.getElementById('recFilter')?.value || 'all';
-    if (filter !== 'all') list = list.filter(r => r.status === filter);
-    // Sort
-    const sort = document.getElementById('recSort')?.value || 'newest';
-    list.sort((a,b) => {
-      switch(sort) {
-        case 'oldest': return (a.created_at||0) - (b.created_at||0);
-        case 'largest': return (b.bytes||0) - (a.bytes||0);
-        case 'name': return (a.filename||'').localeCompare(b.filename||'');
-        default: return (b.created_at||0) - (a.created_at||0);
-      }
-    });
-    const el = document.getElementById('recList');
-    document.getElementById('rec-count').textContent =
-      list.length + ' recording' + (list.length !== 1 ? 's' : '');
-
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <p>No recordings yet</p>
-        <small>Recordings will appear here after you start recording a stream</small>
-      </div>`;
-      return;
-    }
-    el.innerHTML = list.map(r => {
-      const statusCls = r.status || 'completed';
-      const name = r.filename || r.id;
-      const ch = Object.values(channels).find(c => c.id === r.channel_id);
-      const plat = r.platform || ch?.platform || '';
-      const chName = r.channel_display_name || ch?.display_name || '';
-      const date = r.created_at ? new Date(r.created_at * 1000).toLocaleString() : '—';
-      const size = fmtBytes(r.bytes);
-      const dur = (r.started_at && r.ended_at)
-        ? fmtDurSec(r.ended_at - r.started_at)
-        : (r.started_at ? fmtDur(r.started_at) : '—');
-      const canDownload = r.filepath && statusCls === 'completed';
-      const isActive = statusCls === 'recording' || statusCls === 'starting';
-      const thumb = r.channel_thumbnail || r.channel_avatar || '';
-      return `<div class="rec-row">
-        <div class="rec-icon" style="width:48px;height:48px;overflow:hidden;border-radius:8px;flex-shrink:0">
-          ${thumb ? `<img src="${esc(thumb)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : ''}
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="${thumb ? 'display:none' : ''}">
-            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-          </svg>
-        </div>
-        <div class="rec-info">
-          <div class="rec-name" title="${esc(name)}">${esc(name)}</div>
-          <div class="rec-meta">
-            ${chName ? `<span>${esc(chName)}</span>` : ''}
-            ${plat ? `<span>${esc(plat)}</span>` : ''}
-            <span>${date}</span>
-            <span>${size}</span>
-            <span>${dur}</span>
-          </div>
-        </div>
-        <span class="rec-status ${statusCls}">${statusCls.toUpperCase()}</span>
-        <div class="rec-actions">
-          ${isActive ? `<button class="act-btn" title="View log" onclick="openRecLog('${r.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="9" y2="18"/></svg>
-          </button>` : ''}
-          ${canDownload ? `<button class="act-btn" title="Preview" onclick="openPreview('${r.id}','${esc(name)}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </button>` : ''}
-          ${canDownload ? `<a class="act-btn" title="Download" href="${API}/api/download/${r.id}" target="_blank">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-          </a>` : ''}
-          ${canDownload ? `<button class="act-btn" title="Archive" onclick="archiveRecording('${r.id}')" style="color:var(--purple)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
-            </svg>
-          </button>` : ''}
-          ${statusCls === 'archived' ? `<button class="act-btn" title="Restore" onclick="restoreRecording('${r.id}')" style="color:var(--green)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-            </svg>
-          </button>` : ''}
-          <button class="act-btn danger" title="Delete recording" onclick="deleteRecording('${r.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-            </svg>
-          </button>
-        </div>
-      </div>`;
-    }).join('');
-  } catch {}
-}
-
-function fmtDurSec(s) {
-  if (!s || s < 0) return '—';
-  s = Math.floor(s);
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-}
-
-async function deleteRecording(recId) {
-  if (!confirm('Delete this recording and its file?')) return;
-  try {
-    await fetch(`${API}/api/recordings/${recId}`, { method: 'DELETE' });
-    toast('Recording deleted');
-    fetchRecordings();
-    fetchDisk();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function archiveRecording(recId) {
-  try {
-    const res = await fetch(`${API}/api/recordings/${recId}/archive`, { method: 'POST' });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-    toast('Recording archived');
-    fetchRecordings();
-    fetchDisk();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-async function restoreRecording(recId) {
-  try {
-    const res = await fetch(`${API}/api/recordings/${recId}/restore`, { method: 'POST' });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-    toast('Recording restored');
-    fetchRecordings();
-    fetchDisk();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-// ── Disk usage ────────────────────────────────────────────────────────────────
-async function fetchDisk() {
-  try {
-    const res = await fetch(`${API}/api/disk`);
-    const d = await res.json();
-    const pct = d.total > 0 ? Math.round((d.used / d.total) * 100) : 0;
-    const fill = document.getElementById('diskFill');
-    fill.style.width = pct + '%';
-    fill.className = 'disk-fill' + (pct > 90 ? ' danger' : pct > 75 ? ' warn' : '');
-    document.getElementById('diskText').textContent =
-      `${fmtBytes(d.recordings_bytes)} used · ${fmtBytes(d.free)} free`;
-  } catch {}
-}
-
-// ── Import / Export ───────────────────────────────────────────────────────────
 async function exportConfig() {
   try {
     const res = await fetch(`${API}/api/export`);
     const data = await res.json();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'streamrec-config.json'; a.click();
-    URL.revokeObjectURL(url);
+    a.href = URL.createObjectURL(blob);
+    a.download = 'streamrec-backup.json';
+    a.click();
     toast('Config exported');
-  } catch(e) { toast('Error: ' + e.message, true); }
+  } catch {}
 }
 
 async function importConfig(input) {
@@ -1848,664 +1849,54 @@ async function importConfig(input) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-    const res = await fetch(`${API}/api/import`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+    await fetch(`${API}/api/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ channels: data.channels || {}, settings: data.settings || {}, merge: true })
     });
-    const result = await res.json();
-    toast(`Imported ${result.imported_channels} channel(s)`);
+    toast('Configuration imported');
     fetchChannels();
     loadSettings();
   } catch(e) { toast('Import failed: ' + e.message, true); }
   input.value = '';
 }
 
-// ── Theme ─────────────────────────────────────────────────────────────────────
+// ── Theme ──
 function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light');
   localStorage.setItem('streamrecTheme', isLight ? 'light' : 'dark');
-  const icon = document.getElementById('theme-icon');
-  icon.innerHTML = isLight
-    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
-    : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 }
-(function initTheme() {
-  if (localStorage.getItem('streamrecTheme') === 'light') {
-    document.documentElement.classList.add('light');
-    const icon = document.getElementById('theme-icon');
-    if (icon) icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-  }
-})();
-
-// ── Drag-and-drop ─────────────────────────────────────────────────────────────
-function onDragStart(e, chId) {
-  if (selectMode) { e.preventDefault(); return; }
-  dragSrcId = chId;
-  e.dataTransfer.effectAllowed = 'move';
-  e.target.classList.add('dragging');
-}
-function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-function onDragEnd(e) {
-  e.target.classList.remove('dragging');
-  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-}
-function onDrop(e, targetId) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
-  if (!dragSrcId || dragSrcId === targetId) return;
-  // Build current order
-  const grid = document.getElementById('channelsGrid');
-  const cards = [...grid.querySelectorAll('.ch-card')];
-  const order = cards.map(c => c.id.replace('card-', ''));
-  const srcIdx = order.indexOf(dragSrcId);
-  const tgtIdx = order.indexOf(targetId);
-  if (srcIdx < 0 || tgtIdx < 0) return;
-  order.splice(srcIdx, 1);
-  order.splice(tgtIdx, 0, dragSrcId);
-  // Update local sort_order
-  order.forEach((id, i) => { if (channels[id]) channels[id].sort_order = i; });
-  renderChannels();
-  // Save to backend
-  fetch(`${API}/api/channels/reorder`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ order })
-  }).catch(() => {});
-  dragSrcId = null;
+if (localStorage.getItem('streamrecTheme') === 'light') {
+  document.documentElement.classList.add('light');
 }
 
-// ── Multi-select ──────────────────────────────────────────────────────────────
-function toggleSelectMode() {
-  selectMode = !selectMode;
-  selectedIds.clear();
-  const btn = document.getElementById('selectModeBtn');
-  btn.style.borderColor = selectMode ? 'var(--blue)' : '';
-  btn.style.color = selectMode ? 'var(--blue)' : '';
-  renderChannels();
-}
-function exitSelectMode() {
-  selectMode = false; selectedIds.clear();
-  const btn = document.getElementById('selectModeBtn');
-  btn.style.borderColor = ''; btn.style.color = '';
-  renderChannels();
-}
-function onCardClick(e, chId) {
-  if (!selectMode) return;
-  if (e.target.closest('.act-btn, .cn-act, .cn-toggle, .toggle, button, a')) return;
-  e.preventDefault();
-  if (selectedIds.has(chId)) selectedIds.delete(chId); else selectedIds.add(chId);
-  const card = document.getElementById('card-' + chId);
-  if (card) card.classList.toggle('selected', selectedIds.has(chId));
-  updateBulkBar();
-}
-function updateBulkBar() {
-  const bar = document.getElementById('bulkBar');
-  if (selectMode && selectedIds.size > 0) {
-    bar.classList.add('show');
-    document.getElementById('bulkCount').textContent = selectedIds.size + ' selected';
-  } else {
-    bar.classList.remove('show');
-  }
-}
-async function bulkAction(action) {
-  if (!selectedIds.size) return;
-  if (action === 'delete' && !confirm(`Delete ${selectedIds.size} channel(s)?`)) return;
-  try {
-    const res = await fetch(`${API}/api/channels/bulk`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ ids: [...selectedIds], action })
-    });
-    const data = await res.json();
-    const ok = data.results.filter(r => r.ok).length;
-    toast(`${action}: ${ok}/${selectedIds.size} succeeded`);
-    exitSelectMode();
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-function openBulkEdit() {
-  if (!selectedIds.size) return;
-  const q = prompt('Set quality for ' + selectedIds.size + ' channels (leave blank to skip):\nbest, 1080p, 720p, 480p, worst');
-  if (q === null) return;
-  const f = prompt('Set format for ' + selectedIds.size + ' channels (leave blank to skip):\nmp4, mkv, ts');
-  if (f === null) return;
-  bulkEdit(q.trim(), f.trim());
-}
-
-async function bulkEdit(quality, format) {
-  try {
-    const res = await fetch(`${API}/api/channels/bulk-edit`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ ids: [...selectedIds], quality: quality || null, format: format || null })
-    });
-    const data = await res.json();
-    toast(`Updated ${data.updated} channel(s)`);
-    exitSelectMode();
-    fetchChannels();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-// ── Video preview ─────────────────────────────────────────────────────────────
-function openPreview(recId, name) {
-  const video = document.getElementById('previewVideo');
-  video.src = `${API}/api/preview/${recId}`;
-  document.getElementById('previewTitle').textContent = name;
-  document.getElementById('previewOverlay').classList.add('open');
-  video.play().catch(() => {});
-}
-function closePreview() {
-  const video = document.getElementById('previewVideo');
-  video.pause();
-  video.src = '';
-  document.getElementById('previewOverlay').classList.remove('open');
-}
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
-let toastT;
-function toast(msg, err=false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.borderColor = err ? 'rgba(239,68,68,0.5)' : 'var(--border)';
-  el.classList.add('show');
-  clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove('show'), 3000);
-}
-
-// ── Platforms page ────────────────────────────────────────────────────────────
-let allPlatforms = [];
-
-async function fetchPlatforms() {
-  if (allPlatforms.length) { renderPlatforms(allPlatforms); return; }
-  try {
-    const res = await fetch(`${API}/api/platforms`);
-    allPlatforms = await res.json();
-    renderPlatforms(allPlatforms);
-  } catch {}
-}
-
-function renderPlatforms(list) {
-  document.getElementById('platform-count').textContent = list.length + ' platforms';
-  const grid = document.getElementById('platformsGrid');
-  grid.innerHTML = list.map(p => {
-    const textColor = p.color === '#53fc18' || p.color === '#ffffff' ? '#111' : '#fff';
-    return `<div class="plat-card">
-      <div class="plat-icon" style="background:${esc(p.color)};color:${textColor}">${esc(p.emoji)}</div>
-      <div class="plat-info">
-        <div class="plat-name">${esc(p.name)}</div>
-        <div class="plat-domain">${esc(p.domain)}</div>
-        <div class="plat-notes">${esc(p.notes)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function filterPlatforms() {
-  const q = document.getElementById('platSearchInput').value.toLowerCase();
-  document.querySelectorAll('.plat-card').forEach((card, i) => {
-    const p = allPlatforms[i];
-    if (!p) return;
-    const match = (p.name + p.domain + p.notes).toLowerCase().includes(q);
-    card.style.display = match ? '' : 'none';
-  });
-}
-const debouncedFilterPlatforms = debounce(filterPlatforms, 150);
-
-// ── Cookies management ────────────────────────────────────────────────────────
-async function populateCookiesSelects() {
-  try {
-    const res = await fetch(`${API}/api/cookies`);
-    const files = await res.json();
-    const selects = ['s-cookies-file', 'addCookiesFile', 'chCookiesFile'];
-    selects.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const current = el.value;
-      const firstOpt = el.options[0];
-      el.innerHTML = '';
-      el.appendChild(firstOpt);
-      files.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.filename;
-        opt.textContent = `${f.filename} (${fmtBytes(f.size)})`;
-        el.appendChild(opt);
-      });
-      el.value = current;
-    });
-  } catch {}
-}
-
-async function uploadCookies(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const status = document.getElementById('cookiesUploadStatus');
-  status.textContent = 'Uploading…';
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(`${API}/api/cookies/upload`, { method: 'POST', body: fd });
-    const data = await res.json();
-    status.textContent = `Uploaded: ${data.filename}`;
-    toast('Cookies file uploaded');
-    await populateCookiesSelects();
-    loadCookiesList();
-  } catch(e) {
-    status.textContent = 'Upload failed';
-    toast('Upload failed: ' + e.message, true);
-  }
-  input.value = '';
-}
-
-async function loadCookiesList() {
-  try {
-    const res = await fetch(`${API}/api/cookies`);
-    const files = await res.json();
-    const el = document.getElementById('cookiesList');
-    if (!el) return;
-    if (!files.length) {
-      el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No cookies files uploaded yet.</div>';
-      return;
+// ── Polling & Clock ──
+setInterval(() => {
+  document.querySelectorAll('.channel-card.recording').forEach(card => {
+    const id = card.id.replace('card-', '');
+    const ch = channels[id];
+    if (ch && ch.rec_started) {
+      const dur = card.querySelector('.ch-dur');
+      if (dur) dur.textContent = fmtDur(ch.rec_started);
     }
-    el.innerHTML = files.map(f => `
-      <div class="cookie-file-row">
-        <div>
-          <span class="cookie-file-name">${esc(f.filename)}</span>
-          <span class="cookie-file-size">${fmtBytes(f.size)}</span>
-        </div>
-        <button class="act-btn danger" title="Delete" onclick="deleteCookieFile('${esc(f.filename)}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-          </svg>
-        </button>
-      </div>`).join('');
-  } catch {}
-}
-
-async function deleteCookieFile(filename) {
-  if (!confirm(`Delete cookies file "${filename}"?`)) return;
-  try {
-    await fetch(`${API}/api/cookies/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-    toast('Cookies file deleted');
-    await populateCookiesSelects();
-    loadCookiesList();
-  } catch(e) { toast('Error: ' + e.message, true); }
-}
-
-// ── Poll ──────────────────────────────────────────────────────────────────────
-let pollInterval = 5000;  // default; adjusted after version fetch
-let pollTimer = null;
+  });
+}, 1000);
 
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
     fetchChannels();
     fetchSlots();
-    if (activeLogChId || activeRecLogId) refreshLog();
+    if (activeLogChId) refreshLog();
   }, pollInterval);
 }
 
-async function initPolling() {
-  try {
-    const res = await fetch(`${API}/api/version`);
-    const data = await res.json();
-    if (data.poll_interval) pollInterval = data.poll_interval * 1000;
-  } catch {}
-  // Wait for initial fetches to complete before starting polling
-  await Promise.allSettled([fetchChannels(), loadSettings(), fetchAccount(), fetchSlots()]);
+// ── Initialize ──
+async function init() {
+  await Promise.allSettled([fetchChannels(), loadSettings(), fetchSlots()]);
   startPolling();
 }
-
-// ── Account ───────────────────────────────────────────────────────────────────
-let accountState = { exists: false, username: '', avatar: '' };
-let pendingAvatarDataUrl = ''; // captured during welcome flow (new-signup avatar)
-
-function initialsOf(name) {
-  if (!name) return 'G';
-  return String(name).trim().charAt(0).toUpperCase() || 'G';
-}
-
-function renderAccountCorner() {
-  const btn      = document.getElementById('accountBtn');
-  const nameTxt  = document.getElementById('accountNameTxt');
-  const img      = document.getElementById('accountPfpImg');
-  const fallback = document.getElementById('accountPfpFallback');
-  const header   = document.getElementById('accountMenuHeader');
-  const mCreate  = document.getElementById('accountMenuCreate');
-  const mSettings= document.getElementById('accountMenuSettings');
-  const mPfp     = document.getElementById('accountMenuPfp');
-  const mDelete  = document.getElementById('accountMenuDelete');
-  const mSep1    = document.getElementById('accountMenuSep1');
-
-  if (accountState.exists) {
-    const name = accountState.username || 'Account';
-    nameTxt.textContent = name;
-    btn.title = name;
-    header.textContent = 'Signed in as ' + name;
-    if (accountState.avatar) {
-      img.src = accountState.avatar;
-      img.style.display = '';
-      fallback.style.display = 'none';
-    } else {
-      img.style.display = 'none';
-      fallback.style.display = '';
-      fallback.textContent = initialsOf(name);
-    }
-    mCreate.style.display   = 'none';
-    mSettings.style.display = '';
-    mPfp.style.display      = '';
-    mDelete.style.display   = '';
-    mSep1.style.display     = '';
-  } else {
-    nameTxt.textContent = 'Guest';
-    btn.title = 'Guest (no account)';
-    header.textContent = 'Browsing as Guest';
-    img.style.display = 'none';
-    fallback.style.display = '';
-    fallback.textContent = 'G';
-    mCreate.style.display   = '';
-    mSettings.style.display = 'none';
-    mPfp.style.display      = 'none';
-    mDelete.style.display   = 'none';
-    mSep1.style.display     = 'none';
-  }
-}
-
-function toggleAccountMenu(e) {
-  if (e) e.stopPropagation();
-  document.getElementById('accountMenu').classList.toggle('open');
-}
-function closeAccountMenu() {
-  document.getElementById('accountMenu').classList.remove('open');
-}
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#accountCorner')) closeAccountMenu();
-});
-
-async function fetchAccount() {
-  try {
-    const res = await fetch(`${API}/api/account`);
-    const data = await res.json();
-    accountState = {
-      exists:   !!data.exists,
-      username: data.username || '',
-      avatar:   data.avatar   || '',
-    };
-    renderAccountCorner();
-    // Show welcome modal on first visit if no account and user hasn't skipped
-    if (!accountState.exists && localStorage.getItem('streamrecAccountSkipped') !== '1') {
-      openWelcome(true);
-    }
-  } catch { /* offline / not ready yet */ }
-}
-
-function openWelcome(firstRun) {
-  closeAccountMenu();
-  document.getElementById('welUsername').value = '';
-  document.getElementById('welPassword').value = '';
-  document.getElementById('welPasswordConfirm').value = '';
-  document.getElementById('welAvatarInput').value = '';
-  clearAvatarPreview('welAvatarPreview','welAvatarInput');
-  document.getElementById('welPwHint').textContent = '';
-  document.getElementById('welPwHint').className = 'pw-hint';
-  document.getElementById('welcomeOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('welUsername').focus(), 80);
-}
-function closeWelcome() {
-  document.getElementById('welcomeOverlay').classList.remove('open');
-}
-
-function updatePwMatch() {
-  const pw  = document.getElementById('welPassword').value;
-  const pw2 = document.getElementById('welPasswordConfirm').value;
-  const hint = document.getElementById('welPwHint');
-  if (!pw && !pw2) { hint.textContent = ''; hint.className = 'pw-hint'; return; }
-  if (pw.length < 4) { hint.textContent = 'Password must be at least 4 characters.'; hint.className = 'pw-hint err'; return; }
-  if (!pw2) { hint.textContent = 'Re-enter the password to confirm.'; hint.className = 'pw-hint'; return; }
-  if (pw !== pw2) { hint.textContent = 'Passwords do not match.'; hint.className = 'pw-hint err'; return; }
-  hint.textContent = 'Passwords match.'; hint.className = 'pw-hint ok';
-}
-
-function updateSettingsPwMatch() {
-  const pw  = document.getElementById('accSettingsNewPw').value;
-  const pw2 = document.getElementById('accSettingsNewPwConfirm').value;
-  const hint = document.getElementById('accSettingsPwHint');
-  if (!pw && !pw2) {
-    hint.textContent = 'Leave blank to keep current password.';
-    hint.className = 'pw-hint';
-    return;
-  }
-  if (pw.length < 4) { hint.textContent = 'New password must be at least 4 characters.'; hint.className = 'pw-hint err'; return; }
-  if (pw !== pw2) { hint.textContent = 'Passwords do not match.'; hint.className = 'pw-hint err'; return; }
-  hint.textContent = 'Passwords match.'; hint.className = 'pw-hint ok';
-}
-
-function previewAvatarFile(input, previewId) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    toast('Image too large — max 2 MiB', true);
-    input.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    pendingAvatarDataUrl = reader.result;
-    const el = document.getElementById(previewId);
-    el.innerHTML = `<img src="${reader.result}" alt="">`;
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearAvatarPreview(previewId, inputId) {
-  pendingAvatarDataUrl = '';
-  if (inputId) {
-    const inp = document.getElementById(inputId);
-    if (inp) inp.value = '';
-  }
-  const el = document.getElementById(previewId);
-  el.innerHTML = '?';
-}
-
-async function createAccount() {
-  const username = document.getElementById('welUsername').value.trim();
-  const password = document.getElementById('welPassword').value;
-  const confirm  = document.getElementById('welPasswordConfirm').value;
-  if (!username || username.length < 2) { toast('Username must be at least 2 characters', true); return; }
-  if (password.length < 4)              { toast('Password must be at least 4 characters', true); return; }
-  if (password !== confirm)             { toast('Passwords do not match', true); return; }
-
-  const btn = document.getElementById('welConfirmBtn');
-  btn.disabled = true;
-  try {
-    const res = await fetch(`${API}/api/account`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ username, password, confirm_password: confirm })
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-
-    // Upload avatar if the user picked one
-    const input = document.getElementById('welAvatarInput');
-    if (input.files && input.files[0]) {
-      const fd = new FormData();
-      fd.append('file', input.files[0]);
-      try { await fetch(`${API}/api/account/avatar`, { method: 'POST', body: fd }); } catch {}
-    }
-    localStorage.removeItem('streamrecAccountSkipped');
-    toast('Account created');
-    closeWelcome();
-    await fetchAccount();
-  } catch (e) {
-    toast('Error: ' + e.message, true);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function skipAccount() {
-  localStorage.setItem('streamrecAccountSkipped', '1');
-  closeWelcome();
-  toast('Continuing as Guest');
-}
-
-// ── Account settings ──────────────────────────────────────────────────────────
-function openAccountSettings() {
-  closeAccountMenu();
-  if (!accountState.exists) { openWelcome(false); return; }
-  document.getElementById('accSettingsUsername').value = accountState.username || '';
-  document.getElementById('accSettingsCurrentPw').value = '';
-  document.getElementById('accSettingsNewPw').value = '';
-  document.getElementById('accSettingsNewPwConfirm').value = '';
-  const avatarEl = document.getElementById('accSettingsAvatar');
-  if (accountState.avatar) {
-    avatarEl.innerHTML = `<img src="${accountState.avatar}" alt="">`;
-  } else {
-    avatarEl.innerHTML = initialsOf(accountState.username);
-  }
-  const hint = document.getElementById('accSettingsPwHint');
-  hint.textContent = 'Leave blank to keep current password.';
-  hint.className = 'pw-hint';
-  document.getElementById('accountSettingsOverlay').classList.add('open');
-}
-
-function closeAccountSettings() {
-  document.getElementById('accountSettingsOverlay').classList.remove('open');
-}
-
-async function saveAccountSettings() {
-  const username = document.getElementById('accSettingsUsername').value.trim();
-  const curPw    = document.getElementById('accSettingsCurrentPw').value;
-  const newPw    = document.getElementById('accSettingsNewPw').value;
-  const newPw2   = document.getElementById('accSettingsNewPwConfirm').value;
-
-  const body = {};
-  if (username && username !== accountState.username) body.username = username;
-  if (newPw) {
-    if (!curPw)             { toast('Enter current password to change it', true); return; }
-    if (newPw.length < 4)   { toast('New password must be at least 4 characters', true); return; }
-    if (newPw !== newPw2)   { toast('New passwords do not match', true); return; }
-    body.current_password     = curPw;
-    body.new_password         = newPw;
-    body.confirm_new_password = newPw2;
-  }
-  if (!Object.keys(body).length) {
-    closeAccountSettings();
-    return;
-  }
-  try {
-    const res = await fetch(`${API}/api/account`, {
-      method: 'PATCH', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-    toast('Account updated');
-    closeAccountSettings();
-    await fetchAccount();
-  } catch (e) {
-    toast('Error: ' + e.message, true);
-  }
-}
-
-async function uploadAccountAvatar(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    toast('Image too large — max 2 MiB', true);
-    input.value = '';
-    return;
-  }
-  if (!accountState.exists) {
-    toast('Create an account first', true);
-    input.value = '';
-    return;
-  }
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(`${API}/api/account/avatar`, { method: 'POST', body: fd });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
-    toast('Profile picture updated');
-    await fetchAccount();
-    // Also refresh the settings modal preview if open
-    const avatarEl = document.getElementById('accSettingsAvatar');
-    if (avatarEl && accountState.avatar) avatarEl.innerHTML = `<img src="${accountState.avatar}" alt="">`;
-  } catch (e) {
-    toast('Error: ' + e.message, true);
-  }
-  input.value = '';
-}
-
-async function removeAccountAvatar() {
-  if (!accountState.exists) return;
-  try {
-    await fetch(`${API}/api/account/avatar`, { method: 'DELETE' });
-    toast('Profile picture removed');
-    await fetchAccount();
-    const avatarEl = document.getElementById('accSettingsAvatar');
-    if (avatarEl) avatarEl.innerHTML = initialsOf(accountState.username);
-  } catch (e) { toast('Error: ' + e.message, true); }
-}
-
-async function removeAccount() {
-  closeAccountMenu();
-  if (!confirm('Delete your account? This removes your saved username, password hash, and profile picture from this device.')) return;
-  try {
-    await fetch(`${API}/api/account`, { method: 'DELETE' });
-    localStorage.setItem('streamrecAccountSkipped', '1');
-    toast('Account deleted');
-    closeAccountSettings();
-    await fetchAccount();
-  } catch (e) { toast('Error: ' + e.message, true); }
-}
-
-// initPolling handles the initial fetches + starts polling
-initPolling();
-
-// Tick recording durations every second without a full fetch
-setInterval(() => {
-  document.querySelectorAll('.ch-card').forEach(card => {
-    const id = card.id.replace('card-', '');
-    const ch = channels[id];
-    if (!ch) return;
-    const isRec = ch.rec_status === 'recording' || ch.rec_status === 'starting';
-    if (isRec && ch.rec_started) {
-      const durEl = card.querySelector('.cn-dur');
-      if (durEl) durEl.textContent = ch.max_duration ? fmtDur(ch.rec_started) + ' / ' + ch.max_duration + 'm' : fmtDur(ch.rec_started);
-    }
-  });
-  updateTabTitle();
-}, 1000);
-
-function updateTabTitle() {
-  const list = Object.values(channels);
-  const recCount = list.filter(c => c.rec_status === 'recording').length;
-  const liveCount = list.filter(c => c.is_live && c.rec_status !== 'recording').length;
-  let parts = [];
-  if (recCount) parts.push(`${recCount} recording`);
-  if (liveCount) parts.push(`${liveCount} live`);
-  document.title = parts.length ? `(${parts.join(' · ')}) StreamRec` : 'StreamRec';
-}
-
-// Keyboard
-document.addEventListener('keydown', e => {
-  // Don't trigger shortcuts when typing in inputs
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
-    closeLog();
-    closePreview();
-    if (selectMode) exitSelectMode();
-  }
-  if (e.key === 'n' || e.key === 'N') { openAddModal(); return; }
-  if (e.key === '1') { navigate('channels'); return; }
-  if (e.key === '2') { navigate('settings'); return; }
-  if (e.key === '3') { navigate('recordings'); return; }
-  if (e.key === '4') { navigate('platforms'); return; }
-  // Bulk actions when in select mode
-  if (selectMode && selectedIds.size > 0) {
-    if (e.key === 'r' || e.key === 'R') { bulkAction('record'); return; }
-    if (e.key === 's' || e.key === 'S') { bulkAction('stop'); return; }
-    if (e.key === 'Delete') { bulkAction('delete'); return; }
-  }
-});
+init();
 </script>
 </body>
 </html>

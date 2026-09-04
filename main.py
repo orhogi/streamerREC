@@ -15,13 +15,15 @@ import subprocess
 import sys
 import time
 import uuid
+import ipaddress
+import socket
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -226,14 +228,18 @@ def _kill_proc(pid: int, force: bool = False) -> None:
     """Terminate or kill a process (and its children) cross-platform."""
     try:
         if IS_WINDOWS:
-            # CTRL_BREAK_EVENT propagates to the whole process group on Windows
-            sig = signal.CTRL_BREAK_EVENT
-            os.kill(pid, sig)
+            # First attempt graceful CTRL_BREAK_EVENT
+            try:
+                os.kill(pid, signal.CTRL_BREAK_EVENT)
+            except Exception:
+                pass
             if force:
-                # Give it a moment then hard-kill
-                import ctypes
-                ctypes.windll.kernel32.TerminateProcess(
-                    ctypes.windll.kernel32.OpenProcess(1, False, pid), 1
+                # Force kill the entire process tree (/T) on Windows
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
                 )
         else:
             sig = signal.SIGKILL if force else signal.SIGTERM
@@ -245,12 +251,32 @@ def _kill_proc(pid: int, force: bool = False) -> None:
         pass
 
 
+def _safe_replace_file(src: Path, dst: Path, max_retries: int = 5, delay: float = 0.5) -> bool:
+    """Safely replace dst with src, handling transient Windows file locks."""
+    for attempt in range(max_retries):
+        try:
+            if IS_WINDOWS:
+                if dst.exists():
+                    dst.unlink()
+                src.rename(dst)
+            else:
+                src.replace(dst)
+            return True
+        except (PermissionError, OSError) as e:
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+            else:
+                logger.warning("Failed to replace %s with %s after %d attempts: %s", src, dst, max_retries, e)
+                return False
+    return False
+
+
 # ── State persistence ─────────────────────────────────────────────────────────
 
 def _save_state_sync():
     """Write state to disk immediately (internal — prefer _save_state)."""
     saved_channels = {}
-    for cid, ch in channels.items():
+    for cid, ch in list(channels.items()):
         c = dict(ch)
         for k in ("recording_id", "is_live", "last_checked"):
             c.pop(k, None)
@@ -260,7 +286,7 @@ def _save_state_sync():
         saved_channels[cid] = c
     # Persist finished recordings (completed/error) so they survive restarts
     saved_recordings = {}
-    for rid, rec in recordings.items():
+    for rid, rec in list(recordings.items()):
         if rec.get("status") in ("completed", "error", "archived"):
             saved_recordings[rid] = rec
     try:
@@ -268,7 +294,7 @@ def _save_state_sync():
         tmp.write_text(
             json.dumps({
                 "channels": saved_channels,
-                "settings": settings,
+                "settings": dict(settings),
                 "recordings": saved_recordings,
             }, indent=2),
             encoding="utf-8",
@@ -569,6 +595,7 @@ async def _start_recording_for_channel(ch_id: str) -> Optional[str]:
             "bytes": 0, "speed": None,
             "filepath": None, "filename": None,
             "log": [], "stopping": False, "auto": False,
+            "is_favorite": False,
         }
         channels[ch_id]["recording_id"] = rec_id
         asyncio.create_task(run_recording(rec_id))
@@ -596,11 +623,15 @@ async def run_recording(rec_id: str):
     output_path  = rec_dir / f"{stem}.%(ext)s"
 
     _no_live_from_start = (
+        "twitch", "tiktok", "kick", "stripchat", "bigo", "pandalive",
+        "chaturbate", "cam4", "myfreecams", "camsoda", "bongacams",
+        "cammodels", "streamate", "flirt4free",
+    )
+    _cam_platforms = (
         "tiktok", "kick", "stripchat", "bigo", "pandalive",
         "chaturbate", "cam4", "myfreecams", "camsoda", "bongacams",
         "cammodels", "streamate", "flirt4free",
     )
-    _cam_platforms = _no_live_from_start  # same set for format logic
 
     # Cam/HLS sites use numeric format IDs — "best" keyword alone fails.
     # Build a fallback chain that works for both cam sites and regular streams.
@@ -670,24 +701,33 @@ async def run_recording(rec_id: str):
     if extra:
         try:
             parts = shlex.split(extra, posix=not IS_WINDOWS)
-            # Block dangerous yt-dlp flags that could execute arbitrary commands
+            # Block dangerous yt-dlp flags that could execute arbitrary commands or manipulate filesystem
             _DANGEROUS_FLAGS = {
-                "--exec", "-X", "--config-location", "--print", "--print-to-file",
-                "--output-na-placeholder", "--downloader", "--external-downloader",
-                "--proxy",  # proxy is handled separately via --proxy on the cmd
-                "--cookies", "--cookies-from-browser",  # cookies handled separately
-                "--ffmpeg-location", "--prefer-ffmpeg",
+                "--exec", "-X", "--exec-before-download", "--config-location", "--config-locations",
+                "--print", "--print-to-file", "--output-na-placeholder",
+                "--downloader", "--external-downloader", "--downloader-args", "--external-downloader-args",
+                "--proxy", "--cookies", "--cookies-from-browser",
+                "--ffmpeg-location", "--prefer-ffmpeg", "-P", "--paths",
+                "-a", "--batch-file", "--load-info-json", "--plugin-dirs",
+                "-o", "--output", "--alias",
             }
             for part in parts:
-                flag = part.split("=")[0] if "=" in part else part
-                if flag in _DANGEROUS_FLAGS:
+                flag = part.split("=")[0].strip() if "=" in part else part.strip()
+                flag_lower = flag.lower()
+                if (
+                    flag_lower in _DANGEROUS_FLAGS
+                    or flag_lower.startswith("--exec")
+                    or flag_lower.startswith("--config")
+                    or flag_lower.startswith("--paths")
+                    or flag_lower.startswith("-P")
+                ):
                     logger.warning("Blocked dangerous extra_args flag: %s", flag)
                     raise ValueError(f"Blocked dangerous yt-dlp flag: {flag}")
             cmd += parts
         except ValueError:
             raise  # re-raise our own validation errors
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to parse extra_args %r: %s", extra, e)
 
     cmd += ["-o", str(output_path), url]
 
@@ -898,12 +938,13 @@ async def run_recording(rec_id: str):
                     )
                     await asyncio.wait_for(fix_proc.wait(), timeout=REMUX_TIMEOUT)
                 if fix_proc.returncode == 0 and Path(fixed_path).exists():
-                    Path(fp).unlink(missing_ok=True)
-                    Path(fixed_path).rename(fp)
-                    try:
-                        rec["bytes"] = Path(fp).stat().st_size
-                    except Exception:
-                        pass
+                    if _safe_replace_file(Path(fixed_path), Path(fp)):
+                        try:
+                            rec["bytes"] = Path(fp).stat().st_size
+                        except Exception:
+                            pass
+                    else:
+                        Path(fixed_path).unlink(missing_ok=True)
                 else:
                     Path(fixed_path).unlink(missing_ok=True)
             except Exception:
@@ -951,16 +992,25 @@ async def run_recording(rec_id: str):
 
         _save_state()
 
+        if ch_id := rec.get("channel_id"):
+            _prune_channel_recordings(ch_id)
+
         # Webhook notification on recording completion
         if rec.get("status") in ("completed", "error"):
+            ch_data = channels.get(rec.get("channel_id", ""), {})
             asyncio.create_task(_send_webhook("recording_complete", {
                 "recording_id": rec.get("id"),
                 "channel_id": rec.get("channel_id"),
+                "name": ch_data.get("display_name") or ch_data.get("username", ""),
+                "stream_title": ch_data.get("stream_title", ""),
                 "status": rec.get("status"),
                 "filename": rec.get("filename", ""),
                 "bytes": rec.get("bytes", 0),
                 "error": rec.get("error", ""),
                 "platform": rec.get("platform", ""),
+                "avatar": ch_data.get("avatar", ""),
+                "thumbnail": ch_data.get("thumbnail", ""),
+                "duration_seconds": int((rec.get("ended_at") or time.time()) - (rec.get("started_at") or time.time())),
             }))
 
         # Auto-retry on unexpected disconnect
@@ -997,15 +1047,57 @@ async def run_recording(rec_id: str):
 # ── Monitor loop ──────────────────────────────────────────────────────────────
 
 async def _send_webhook(event: str, payload: dict):
-    """Send a JSON POST to the configured webhook URL."""
+    """Send a JSON POST to the configured webhook URL (with native Discord embeds if Discord)."""
     url = settings.get("webhook_url", "").strip()
     if not url:
         return
     try:
+        if "discord.com/api/webhooks" in url or "discordapp.com/api/webhooks" in url:
+            # Build clean Discord embed
+            color_map = {
+                "stream_live": 0x34D399,          # Green
+                "recording_complete": 0x818CF8,   # Indigo/Purple
+            }
+            title_map = {
+                "stream_live": f"🔴 Stream Live: {payload.get('name') or 'Channel'}",
+                "recording_complete": f"📼 Recording Finished: {payload.get('name') or 'Channel'}",
+            }
+            embed = {
+                "title": title_map.get(event, f"StreamRec: {event}"),
+                "color": color_map.get(event, 0x818CF8),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            if payload.get("url"):
+                embed["url"] = payload["url"]
+            if payload.get("stream_title"):
+                embed["description"] = payload["stream_title"]
+            fields = []
+            if payload.get("platform"):
+                fields.append({"name": "Platform", "value": payload["platform"], "inline": True})
+            if payload.get("status"):
+                fields.append({"name": "Status", "value": payload["status"].capitalize(), "inline": True})
+            if payload.get("duration_seconds"):
+                mins = payload["duration_seconds"] // 60
+                secs = payload["duration_seconds"] % 60
+                fields.append({"name": "Duration", "value": f"{mins}m {secs}s", "inline": True})
+            if payload.get("bytes"):
+                b = payload["bytes"]
+                sz = f"{b/(1024**3):.2f} GiB" if b >= 1024**3 else f"{b/(1024**2):.1f} MiB"
+                fields.append({"name": "Size", "value": sz, "inline": True})
+            if fields:
+                embed["fields"] = fields
+            if payload.get("thumbnail"):
+                embed["image"] = {"url": payload["thumbnail"]}
+            elif payload.get("avatar"):
+                embed["thumbnail"] = {"url": payload["avatar"]}
+            post_data = {"embeds": [embed]}
+        else:
+            post_data = {"event": event, **payload}
+
         async with _proc_semaphore:
             proc = await asyncio.create_subprocess_exec(
                 "curl", "-s", "-X", "POST", "-H", "Content-Type: application/json",
-                "-d", json.dumps({"event": event, **payload}, default=str),
+                "-d", json.dumps(post_data, default=str),
                 "--max-time", "10", url,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
@@ -1015,8 +1107,41 @@ async def _send_webhook(event: str, payload: dict):
         pass
 
 
+def _prune_channel_recordings(ch_id: str):
+    """Enforce max_streams per channel: keep the N newest recordings (never deleting favorites)."""
+    ch = channels.get(ch_id)
+    if not ch:
+        return
+    max_s = int(ch.get("max_streams", 0) or 0)
+    if max_s <= 0:
+        return
+    # Find all completed/error/archived recordings for this channel, newest first
+    ch_recs = [
+        (rid, r) for rid, r in recordings.items()
+        if r.get("channel_id") == ch_id and r.get("status") in ("completed", "error", "archived")
+    ]
+    ch_recs.sort(key=lambda x: x[1].get("created_at", 0), reverse=True)
+    
+    kept = 0
+    changed = False
+    for rid, r in ch_recs:
+        if r.get("is_favorite"):
+            continue  # Favorites are shielded from max_streams pruning
+        kept += 1
+        if kept > max_s:
+            if fp := r.get("filepath"):
+                try:
+                    Path(fp).unlink(missing_ok=True)
+                except Exception:
+                    pass
+            recordings.pop(rid, None)
+            changed = True
+    if changed:
+        _save_state()
+
+
 async def _run_retention_cleanup():
-    """Delete recordings older than retention_days."""
+    """Delete recordings older than retention_days (shielding favorites)."""
     days = int(settings.get("retention_days", 0))
     if days <= 0:
         return
@@ -1024,6 +1149,8 @@ async def _run_retention_cleanup():
     for rec_id, rec in list(recordings.items()):
         if rec.get("status") not in ("completed", "error"):
             continue
+        if rec.get("is_favorite"):
+            continue  # Favorites are shielded from retention cleanup
         if rec.get("created_at", time.time()) > cutoff:
             continue
         if fp := rec.get("filepath"):
@@ -1120,6 +1247,7 @@ class AddChannelRequest(BaseModel):
     password:         str  = ""
     extra_args:       str  = ""
     max_duration:     int  = 0
+    max_streams:      int  = 0
     notes:            str  = ""
 
 class UpdateChannelRequest(BaseModel):
@@ -1134,7 +1262,13 @@ class UpdateChannelRequest(BaseModel):
     password:         Optional[str]  = None
     extra_args:       Optional[str]  = None
     max_duration:     Optional[int]  = None
+    max_streams:      Optional[int]  = None
     notes:            Optional[str]  = None
+
+class CutRecordingRequest(BaseModel):
+    start_time:       float  # in seconds
+    end_time:         float  # in seconds
+    title:            Optional[str] = None
 
 class UpdateSettingsRequest(BaseModel):
     pi_mode:          Optional[bool] = None
@@ -1195,18 +1329,22 @@ async def add_channel(req: AddChannelRequest):
         "169.254.169.254",  # AWS metadata
     )
     hostname = parsed.hostname or ""
+    if not hostname:
+        raise HTTPException(400, "Invalid URL — missing host")
     if hostname in _BLOCKED_HOSTS:
         raise HTTPException(400, "URL rejected: private/internal host")
-    if hostname.startswith(("10.", "192.168.", "172.")) or hostname.startswith(("127.", "0.", "::")):
-        raise HTTPException(400, "URL rejected: private/internal host")
-    # Block bare IPs that are not in known-safe ranges
-    import ipaddress
+    
+    # Resolve domain names to verify target IPs are not internal / private
     try:
-        addr = ipaddress.ip_address(hostname)
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
-            raise HTTPException(400, "URL rejected: private/internal IP address")
-    except ValueError:
-        pass  # hostname is a domain name, not an IP — allowed
+        resolved_addrs = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in resolved_addrs:
+            ip_str = sockaddr[0]
+            addr = ipaddress.ip_address(ip_str)
+            if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_multicast:
+                raise HTTPException(400, f"URL rejected: host resolves to private/internal IP ({ip_str})")
+    except socket.gaierror:
+        # DNS resolution failure will be rejected early
+        raise HTTPException(400, "URL rejected: unable to resolve host")
     ch_id    = str(uuid.uuid4())[:8]
     platform = detect_platform(req.url)
     ch = {
@@ -1221,6 +1359,7 @@ async def add_channel(req: AddChannelRequest):
         "ch_password":      req.password,
         "extra_args":       req.extra_args,
         "max_duration":     req.max_duration,
+        "max_streams":      req.max_streams,
         "notes":            req.notes,
         "created_at":  time.time(),
         "display_name": "", "username": "", "avatar": "", "thumbnail": "",
@@ -1553,7 +1692,8 @@ async def preview_recording(rec_id: str, request: Request):
         length = end - start + 1
 
         def iterfile():
-            with open(file_path, "rb") as f:
+            f = open(file_path, "rb")
+            try:
                 f.seek(start)
                 remaining = length
                 while remaining > 0:
@@ -1562,6 +1702,8 @@ async def preview_recording(rec_id: str, request: Request):
                         break
                     remaining -= len(chunk)
                     yield chunk
+            finally:
+                f.close()
 
         return StreamingResponse(
             iterfile(), status_code=206, media_type=content_type,
@@ -1579,6 +1721,89 @@ async def preview_recording(rec_id: str, request: Request):
     })
 
 
+@app.post("/api/recordings/{rec_id}/favorite")
+async def toggle_favorite(rec_id: str):
+    rec = recordings.get(rec_id)
+    if not rec:
+        raise HTTPException(404, "Not found")
+    rec["is_favorite"] = not rec.get("is_favorite", False)
+    _save_state()
+    return {"ok": True, "is_favorite": rec["is_favorite"]}
+
+
+@app.post("/api/recordings/{rec_id}/cut")
+async def cut_recording(rec_id: str, req: CutRecordingRequest):
+    rec = recordings.get(rec_id)
+    if not rec:
+        raise HTTPException(404, "Not found")
+    fp = rec.get("filepath")
+    if not fp or not Path(fp).exists():
+        raise HTTPException(404, "Source file not found")
+    if req.start_time < 0 or req.end_time <= req.start_time:
+        raise HTTPException(400, "Invalid start or end time")
+
+    src_path = Path(fp)
+    clip_id  = str(uuid.uuid4())[:8]
+    clip_name = (req.title or f"{src_path.stem}_clip_{int(req.start_time)}-{int(req.end_time)}").strip()
+    safe_clip = re.sub(r'[^\w\-]', '_', clip_name)
+    dst_path  = src_path.parent / f"{safe_clip}_{clip_id}{src_path.suffix}"
+
+    duration = req.end_time - req.start_time
+    ffmpeg_threads = get_ffmpeg_threads()
+
+    try:
+        async with _proc_semaphore:
+            # Fast stream-copy cut without re-encoding
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-ss", str(req.start_time), "-i", str(src_path),
+                "-t", str(duration), "-c", "copy", "-movflags", "+faststart",
+                "-threads", ffmpeg_threads, str(dst_path), "-y",
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.wait(), timeout=120)
+
+        if proc.returncode != 0 or not dst_path.exists() or dst_path.stat().st_size == 0:
+            if dst_path.exists():
+                dst_path.unlink(missing_ok=True)
+            raise HTTPException(500, "Failed to cut video segment")
+
+        clip_rec_id = str(uuid.uuid4())[:8]
+        recordings[clip_rec_id] = {
+            "id": clip_rec_id,
+            "channel_id": rec.get("channel_id"),
+            "url": rec.get("url"),
+            "platform": rec.get("platform"),
+            "quality": rec.get("quality"),
+            "format": rec.get("format"),
+            "status": "completed",
+            "created_at": time.time(),
+            "started_at": rec.get("started_at"),
+            "ended_at": time.time(),
+            "bytes": dst_path.stat().st_size,
+            "speed": None,
+            "filepath": str(dst_path),
+            "filename": dst_path.name,
+            "log": [f"[StreamRec] Highlight clip created from {rec_id} ({int(duration)}s)"],
+            "stopping": False,
+            "auto": False,
+            "is_favorite": True,  # Auto-favorite user clips
+        }
+        _save_state()
+        return {"ok": True, "clip_id": clip_rec_id, "filename": dst_path.name, "bytes": dst_path.stat().st_size}
+
+    except asyncio.TimeoutError:
+        if dst_path.exists():
+            dst_path.unlink(missing_ok=True)
+        raise HTTPException(504, "Video cutting timed out")
+    except HTTPException:
+        raise
+    except Exception as e:
+        if dst_path.exists():
+            dst_path.unlink(missing_ok=True)
+        raise HTTPException(500, f"Error creating clip: {e}")
+
+
 # ── Settings endpoints ────────────────────────────────────────────────────────
 
 @app.get("/api/settings")
@@ -1592,6 +1817,24 @@ async def update_settings(req: UpdateSettingsRequest):
         settings[field] = val
     _save_state()
     return settings
+
+
+@app.post("/api/settings/test-webhook")
+async def test_webhook():
+    url = settings.get("webhook_url", "").strip()
+    if not url:
+        raise HTTPException(400, "No webhook URL configured in settings")
+    test_payload = {
+        "name": "StreamRec Test",
+        "url": "http://localhost:8000",
+        "platform": "Twitch",
+        "stream_title": "🔔 This is a test notification from StreamRec! Webhook connection verified successfully.",
+        "status": "online",
+        "duration_seconds": 125,
+        "bytes": 52428800,
+    }
+    await _send_webhook("stream_live", test_payload)
+    return {"ok": True, "message": "Test notification sent"}
 
 
 # ── Cookies endpoints ─────────────────────────────────────────────────────────
@@ -1738,7 +1981,7 @@ async def import_config(req: ImportRequest):
     _SAFE_CH_KEYS = {
         "id", "url", "platform", "quality", "format", "monitoring",
         "auto_convert_mp4", "delete_original", "proxy", "cookies_file",
-        "ch_username", "extra_args", "max_duration", "notes",
+        "ch_username", "extra_args", "max_duration", "max_streams", "notes",
         "created_at", "display_name", "username", "avatar", "thumbnail",
         "stream_title", "sort_order",
     }
@@ -1823,6 +2066,43 @@ def _verify_password(password: str, hex_hash: str, hex_salt: str) -> bool:
     return hmac.compare_digest(cand, hex_hash)
 
 
+_active_sessions: dict[str, float] = {}  # token -> created_at
+SESSION_TTL = 7 * 24 * 3600  # 7 days
+
+
+def _create_session_token(username: str) -> str:
+    token = secrets.token_urlsafe(32)
+    _active_sessions[token] = time.time()
+    return token
+
+
+def _is_valid_session(token: Optional[str]) -> bool:
+    if not token:
+        return False
+    created = _active_sessions.get(token)
+    if not created:
+        return False
+    if time.time() - created > SESSION_TTL:
+        _active_sessions.pop(token, None)
+        return False
+    return True
+
+
+def require_auth(request: Request) -> bool:
+    """If an account exists, ensure the request has a valid session token (via cookie or header)."""
+    acc = _load_account()
+    if not acc:
+        return True  # Guest / unconfigured mode
+    token = request.cookies.get("streamrec_session")
+    if not token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+    if not _is_valid_session(token):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return True
+
+
 def _load_account() -> Optional[dict]:
     if not ACCOUNT_FILE.exists():
         return None
@@ -1899,7 +2179,7 @@ async def get_account():
 
 
 @app.post("/api/account")
-async def create_account(req: CreateAccountRequest):
+async def create_account(req: CreateAccountRequest, response: Response):
     if _load_account():
         raise HTTPException(400, "An account already exists")
     username = _validate_username(req.username)
@@ -1916,7 +2196,17 @@ async def create_account(req: CreateAccountRequest):
     }
     _save_account(acc)
     logger.info("Account created for user %r", username)
-    return _public_account(acc)
+    token = _create_session_token(username)
+    response.set_cookie(
+        key="streamrec_session",
+        value=token,
+        max_age=SESSION_TTL,
+        httponly=True,
+        samesite="lax",
+    )
+    res = _public_account(acc)
+    res["token"] = token
+    return res
 
 
 @app.patch("/api/account")
@@ -1945,7 +2235,7 @@ async def update_account(req: UpdateAccountRequest):
 
 
 @app.delete("/api/account")
-async def delete_account():
+async def delete_account(response: Response):
     if ACCOUNT_FILE.exists():
         try:
             ACCOUNT_FILE.unlink()
@@ -1956,6 +2246,8 @@ async def delete_account():
             f.unlink()
         except Exception:
             pass
+    _active_sessions.clear()
+    response.delete_cookie(key="streamrec_session")
     return {"ok": True}
 
 
@@ -2029,7 +2321,7 @@ def _record_login_attempt(client_ip: str):
     _login_attempts.setdefault(client_ip, []).append(time.time())
 
 @app.post("/api/account/login")
-async def login(req: LoginRequest, request: Request):
+async def login(req: LoginRequest, request: Request, response: Response):
     client_ip = request.client.host if request.client else "unknown"
     if _check_login_rate(client_ip):
         await asyncio.sleep(_LOGIN_COOLDOWN)
@@ -2046,7 +2338,26 @@ async def login(req: LoginRequest, request: Request):
         # Deliberate short sleep to blunt naive brute force
         await asyncio.sleep(0.3)
         raise HTTPException(401, "Invalid credentials")
-    return _public_account(acc)
+    token = _create_session_token(acc.get("username", ""))
+    response.set_cookie(
+        key="streamrec_session",
+        value=token,
+        max_age=SESSION_TTL,
+        httponly=True,
+        samesite="lax",
+    )
+    res = _public_account(acc)
+    res["token"] = token
+    return res
+
+
+@app.post("/api/account/logout")
+async def logout(request: Request, response: Response):
+    token = request.cookies.get("streamrec_session")
+    if token:
+        _active_sessions.pop(token, None)
+    response.delete_cookie(key="streamrec_session")
+    return {"ok": True}
 
 
 # ── yt-dlp management ────────────────────────────────────────────────────────
@@ -2131,7 +2442,8 @@ async def update_ytdlp():
 
             if result.returncode == 0:
                 # Make executable
-                await asyncio.create_subprocess_exec("chmod", "+x", "/usr/local/bin/yt-dlp")
+                chmod_proc = await asyncio.create_subprocess_exec("chmod", "+x", "/usr/local/bin/yt-dlp")
+                await chmod_proc.wait()
 
                 # Get new version
                 version_check = await asyncio.create_subprocess_exec(
