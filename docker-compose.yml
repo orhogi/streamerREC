@@ -2,6 +2,8 @@ networks:
   streamrec:
     driver: bridge
 
+# VPN proxy is OPTIONAL — activate with:  docker compose --profile vpn up -d
+# Place your WireGuard config at ./wg0.conf first (see README).
 services:
 
   # ── WireProxy (SOCKS5 proxy over WireGuard) ───────────────────────────────────
@@ -14,6 +16,7 @@ services:
       dockerfile: Dockerfile.wireproxy
     container_name: wireproxy
     restart: unless-stopped
+    profiles: ["vpn"]
     cap_add:
       - NET_ADMIN
     volumes:
@@ -35,7 +38,9 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - wireproxy
+      wireproxy:
+        condition: service_healthy
+        required: false
     volumes:
       - ./recordings:/recordings
     # Uncomment the deploy block below to limit resources (recommended for Raspberry Pi)

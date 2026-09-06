@@ -18,7 +18,7 @@ import uuid
 import ipaddress
 import socket
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -27,6 +27,8 @@ from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, Up
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -76,6 +78,9 @@ _LOGIN_COOLDOWN = 30  # seconds lockout
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _load_state()
+    n = _sweep_orphan_recorders()
+    if n:
+        logger.warning("Killed %d orphaned recording process(es) from a previous run", n)
     logger.info("StreamRec %s starting — %d channels loaded", VERSION, len(channels))
     task = asyncio.create_task(_supervised_monitor())
     yield
@@ -95,6 +100,14 @@ async def lifespan(app: FastAPI):
                 rec["ended_at"] = time.time()
                 if (ch_id := rec.get("channel_id")) and ch_id in channels:
                     channels[ch_id]["recording_id"] = None
+    # Wait briefly for run_recording tasks to reap their subprocesses, so the
+    # final state flush reflects post-cleanup status (and children don't
+    # outlive the server and write orphaned files).
+    deadline = time.time() + 8
+    while time.time() < deadline and any(
+        r.get("status") in ("recording", "starting") for r in recordings.values()
+    ):
+        await asyncio.sleep(0.25)
     _save_state_sync()
     logger.info("StreamRec shutting down")
 
@@ -111,6 +124,122 @@ async def _supervised_monitor():
             await asyncio.sleep(10)
 
 app = FastAPI(title="StreamRec API", version=VERSION, lifespan=lifespan)
+
+
+def _sweep_orphan_recorders() -> int:
+    """Kill yt-dlp/ffmpeg leftovers from a previous crashed/stopped instance.
+    On startup no legit recording children exist yet, so any recorder process
+    whose command line references our recordings dir is an orphan."""
+    killed = 0
+    rec_str = str(RECORDINGS_DIR)
+    try:
+        import psutil  # optional dependency
+    except ImportError:
+        psutil = None
+    if psutil is not None:
+        for p in psutil.process_iter(["name", "cmdline"]):
+            try:
+                name = (p.info["name"] or "").lower()
+                if name not in ("yt-dlp.exe", "yt-dlp", "ffmpeg", "ffmpeg.exe"):
+                    continue
+                cmdline = " ".join(p.info["cmdline"] or [])
+                if rec_str in cmdline:
+                    p.kill()
+                    killed += 1
+            except Exception:
+                continue
+    elif IS_WINDOWS:
+        # Fallback: CIM query (startup-only, so the cost is fine)
+        try:
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-CimInstance Win32_Process | "
+                 "Where-Object { $_.Name -match '^(yt-dlp|ffmpeg)' } | "
+                 "Select-Object ProcessId, CommandLine | ConvertTo-Json"],
+                capture_output=True, text=True, timeout=20,
+            )
+            data = json.loads(out.stdout or "[]")
+            if isinstance(data, dict):
+                data = [data]
+            for entry in data or []:
+                if rec_str in (entry.get("CommandLine") or ""):
+                    subprocess.run(["taskkill", "/F", "/PID", str(entry["ProcessId"])],
+                                   capture_output=True, check=False)
+                    killed += 1
+        except Exception as e:
+            logger.debug("orphan sweep fallback failed: %s", e)
+    else:
+        try:
+            out = subprocess.run(
+                ["pgrep", "-af", "yt-dlp|ffmpeg"],
+                capture_output=True, text=True, timeout=10,
+            )
+            for line in (out.stdout or "").splitlines():
+                if rec_str in line:
+                    subprocess.run(["kill", "-9", line.split(None, 1)[0]],
+                                   capture_output=True, check=False)
+                    killed += 1
+        except Exception as e:
+            logger.debug("orphan sweep fallback failed: %s", e)
+    return killed
+
+
+# ── Auth middleware ──────────────────────────────────────────────────────────
+# When an account exists, all /api/* endpoints require a valid session cookie
+# or Bearer token — except health/version and the account bootstrap endpoints
+# (login / create / status).  Without an account the app runs in open guest
+# mode.  Cookie-authenticated state-changing requests also get a same-origin
+# (CSRF) check on Origin/Referer.
+def _is_auth_exempt(method: str, path: str) -> bool:
+    """Only bootstrap endpoints are reachable without a session.
+    Account PATCH/DELETE (password change, account removal) REQUIRE auth —
+    otherwise an attacker could delete the account and reopen guest mode."""
+    if path in ("/api/health", "/api/version"):
+        return True
+    if path == "/api/account" and method == "GET":
+        return True
+    if path in ("/api/account/login", "/api/account/logout") and method == "POST":
+        return True
+    return False
+
+
+def _client_origin_ok(request: Request) -> bool:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return True
+    if not request.cookies.get("streamrec_session"):
+        return True  # Bearer-token or guest clients carry no cookie
+    origin = request.headers.get("origin") or request.headers.get("referer") or ""
+    if not origin:
+        return True  # non-browser client
+    try:
+        return urlparse(origin).netloc == request.url.netloc
+    except Exception:
+        return False
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if path.startswith("/api/") and not _is_auth_exempt(request.method, path):
+            if _load_account():
+                if not _client_origin_ok(request):
+                    return JSONResponse(
+                        {"detail": "Cross-origin request rejected"}, status_code=403,
+                    )
+                token = request.cookies.get("streamrec_session")
+                if not token:
+                    auth_header = request.headers.get("authorization", "")
+                    if auth_header.lower().startswith("bearer "):
+                        token = auth_header[7:].strip()
+                if not _is_valid_session(token):
+                    return JSONResponse(
+                        {"detail": "Authentication required"}, status_code=401,
+                    )
+        return await call_next(request)
+
+
+app.add_middleware(AuthMiddleware)
+
 
 _proc_semaphore = asyncio.Semaphore(3 if PI_MODE else 6)
 
@@ -614,7 +743,9 @@ async def run_recording(rec_id: str):
     username     = ch.get("display_name") or ch.get("username") or rec_id
     safe_plat    = re.sub(r'[^\w\-]', '_', platform_raw)
     safe_user    = re.sub(r'[^\w\-]', '_', username)
-    now          = datetime.now()
+    # Monotonic-safe timestamp: DST fall-back can repeat wall-clock times,
+    # which would overwrite earlier recordings.
+    now          = datetime.now(timezone.utc)
     date_str     = now.strftime("%Y-%m-%d")
     time_str     = now.strftime("%H-%M-%S")
     rec_dir      = RECORDINGS_DIR / safe_plat / safe_user / date_str
@@ -662,11 +793,19 @@ async def run_recording(rec_id: str):
         "--retry-sleep", "5", "--socket-timeout", "30",
         "--no-warnings", "--newline",
         "--concurrent-fragments", "1",
-        "--fixup", "force",
-        "--downloader-args", f"ffmpeg:-threads {ffmpeg_threads} -fflags +genpts+discardcorrupt",
+        # force-fixup is MP4-specific; for mkv/ts it warns and can abort on
+        # recoverable errors.  "warn" is the safe mode for other containers.
+        "--fixup", "force" if fmt == "mp4" else "warn",
+        # -stats + -loglevel info override yt-dlp's default ffmpeg silence so
+        # live HLS recordings produce visible progress in the log viewer.
+        "--downloader-args",
+        f"ffmpeg:-threads {ffmpeg_threads} -fflags +genpts+discardcorrupt -stats -loglevel info",
         "-f", effective_quality,
         "--merge-output-format", fmt,
-        "--progress", "--print", "after_move:filepath",
+        # NOTE: no --print here — it implies --quiet and silences the entire
+        # log for live recordings.  The final filepath is resolved via the
+        # output glob after the process exits.
+        "--progress",
     ]
     # On Pi / low-memory systems, cap the download buffer to reduce RAM usage
     if _is_pi():
@@ -706,6 +845,7 @@ async def run_recording(rec_id: str):
                 "--exec", "-X", "--exec-before-download", "--config-location", "--config-locations",
                 "--print", "--print-to-file", "--output-na-placeholder",
                 "--downloader", "--external-downloader", "--downloader-args", "--external-downloader-args",
+                "--postprocessor-args", "--ppa", "--exec-after-download",
                 "--proxy", "--cookies", "--cookies-from-browser",
                 "--ffmpeg-location", "--prefer-ffmpeg", "-P", "--paths",
                 "-a", "--batch-file", "--load-info-json", "--plugin-dirs",
@@ -1051,6 +1191,16 @@ async def _send_webhook(event: str, payload: dict):
     url = settings.get("webhook_url", "").strip()
     if not url:
         return
+    # SSRF guard: only http(s), never internal hosts (webhook URL is set by
+    # the admin, but validate anyway since it auto-fires on every recording).
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        logger.warning("Webhook skipped — invalid URL scheme: %r", url[:60])
+        return
+    hostname = parsed.hostname or ""
+    if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0", "169.254.169.254"):
+        logger.warning("Webhook skipped — internal host: %r", hostname)
+        return
     try:
         if "discord.com/api/webhooks" in url or "discordapp.com/api/webhooks" in url:
             # Build clean Discord embed
@@ -1065,7 +1215,7 @@ async def _send_webhook(event: str, payload: dict):
             embed = {
                 "title": title_map.get(event, f"StreamRec: {event}"),
                 "color": color_map.get(event, 0x818CF8),
-                "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             if payload.get("url"):
                 embed["url"] = payload["url"]
@@ -1167,7 +1317,11 @@ async def _check_one_channel(ch_id: str) -> None:
     Runs per-channel error handling so one bad URL can't take down the tick.
     """
     ch = channels.get(ch_id)
-    if not ch or not ch.get("monitoring", True):
+    if not ch:
+        return
+    # Global "auto-record when live" (record_on_add) forces monitoring even
+    # when the per-channel toggle is paused.
+    if not ch.get("monitoring", True) and not settings.get("record_on_add", False):
         return
     existing = ch.get("recording_id")
     if existing and existing in recordings:
@@ -1214,7 +1368,8 @@ async def monitor_loop():
     while True:
         interval = max(5, int(settings.get("monitor_interval", 60)))
         await asyncio.sleep(interval)
-        ids = [cid for cid, c in channels.items() if c.get("monitoring", True)]
+        auto_record = settings.get("record_on_add", False)
+        ids = [cid for cid, c in channels.items() if c.get("monitoring", True) or auto_record]
         if not ids:
             continue
         logger.debug("Monitor tick — checking %d channels", len(ids))
@@ -1334,9 +1489,11 @@ async def add_channel(req: AddChannelRequest):
     if hostname in _BLOCKED_HOSTS:
         raise HTTPException(400, "URL rejected: private/internal host")
     
-    # Resolve domain names to verify target IPs are not internal / private
+    # Resolve domain names to verify target IPs are not internal / private.
+    # getaddrinfo is blocking — run it in a worker thread so the event loop
+    # doesn't stall on slow/unresponsive DNS servers.
     try:
-        resolved_addrs = socket.getaddrinfo(hostname, None)
+        resolved_addrs = await asyncio.get_running_loop().getaddrinfo(hostname, None)
         for family, _, _, _, sockaddr in resolved_addrs:
             ip_str = sockaddr[0]
             addr = ipaddress.ip_address(ip_str)
@@ -1406,6 +1563,17 @@ async def list_channels():
         else:
             c["rec_status"] = None; c["rec_bytes"] = 0
             c["rec_speed"]  = None; c["rec_started"] = None; c["rec_id"] = None
+            # Expose the most recent finished session so the UI log viewer
+            # can show its log after a recording ends.
+            last = max(
+                (r for r in recordings.values()
+                 if r.get("channel_id") == ch.get("id")
+                 and r.get("status") in ("completed", "error")),
+                key=lambda r: r.get("ended_at") or r.get("created_at", 0),
+                default=None,
+            )
+            if last:
+                c["last_rec_id"] = last["id"]
         result.append(c)
     return sorted(result, key=lambda x: (x.get("sort_order", 9999), -x["created_at"]))
 
@@ -1462,9 +1630,18 @@ async def kill_channel(ch_id: str):
         raise HTTPException(400, "Not recording")
     rec = recordings[rec_id]
     _stop_rec(rec, force=True)
-    rec["status"]   = "completed"
-    rec["ended_at"] = time.time()
-    channels[ch_id]["recording_id"] = None
+    # Give run_recording's finally block a moment to reap the process tree,
+    # otherwise a monitor tick can start a new recording while the old
+    # yt-dlp/ffmpeg processes are still dying.
+    for _ in range(20):
+        await asyncio.sleep(0.25)
+        if rec.get("status") not in ("recording", "starting"):
+            break
+    if rec.get("status") in ("recording", "starting"):
+        rec["status"]   = "completed"
+        rec["ended_at"] = time.time()
+        if ch_id in channels and channels[ch_id].get("recording_id") == rec_id:
+            channels[ch_id]["recording_id"] = None
     return {"ok": True}
 
 
@@ -1605,10 +1782,17 @@ async def delete_recording(rec_id: str):
     # Stop active recording process before deleting
     if rec.get("status") in ("recording", "starting"):
         _stop_rec(rec, force=True)
-        rec["status"] = "completed"
-        rec["ended_at"] = time.time()
-        if (ch_id := rec.get("channel_id")) and ch_id in channels:
-            channels[ch_id]["recording_id"] = None
+        # Wait for run_recording's finally block to release the file handles
+        for _ in range(20):
+            await asyncio.sleep(0.25)
+            if rec.get("status") not in ("recording", "starting"):
+                break
+        if rec.get("status") in ("recording", "starting"):
+            rec["status"] = "completed"
+            rec["ended_at"] = time.time()
+            if (ch_id := rec.get("channel_id")) and ch_id in channels \
+                    and channels[ch_id].get("recording_id") == rec_id:
+                channels[ch_id]["recording_id"] = None
     recordings.pop(rec_id, None)
     if fp := rec.get("filepath"):
         try:
@@ -1687,8 +1871,22 @@ async def preview_recording(rec_id: str, request: Request):
 
     range_header = request.headers.get("range")
     if range_header:
-        start = int(range_header.replace("bytes=", "").split("-")[0])
-        end   = min(start + PREVIEW_RANGE_CHUNK, file_size - 1)
+        try:
+            spec = range_header.replace("bytes=", "").strip()
+            first, _, last = spec.partition("-")
+            if first:
+                start = int(first)
+                end   = min(int(last) if last else start + PREVIEW_RANGE_CHUNK - 1,
+                            file_size - 1)
+            else:
+                # suffix range: bytes=-N -> last N bytes
+                n = int(last)
+                start = max(0, file_size - n)
+                end   = file_size - 1
+        except (ValueError, TypeError):
+            raise HTTPException(416, "Invalid Range header")
+        if start > end or start >= file_size:
+            raise HTTPException(416, "Requested range not satisfiable")
         length = end - start + 1
 
         def iterfile():
@@ -1970,6 +2168,7 @@ async def export_config():
         c = dict(ch)
         for k in ("recording_id", "is_live", "last_checked"):
             c.pop(k, None)
+        c.pop("ch_password", None)  # never export credentials
         saved_channels[cid] = c
     return {"channels": saved_channels, "settings": settings}
 
@@ -2005,7 +2204,7 @@ async def import_config(req: ImportRequest):
     # Validate settings types before applying
     _TYPE_MAP = {
         "pi_mode": bool, "monitor_interval": (int, float),
-        "auto_record": bool, "default_quality": str, "default_format": str,
+        "record_on_add": bool, "default_quality": str, "default_format": str,
         "auto_convert_mp4": bool, "delete_original": bool,
         "auto_retry": bool, "max_retries": int, "retry_delay": (int, float),
         "proxy": str, "extra_args": str, "cookies_file": str,
@@ -2309,13 +2508,12 @@ async def delete_avatar():
 def _check_login_rate(client_ip: str) -> bool:
     """Return True if the IP is rate-limited (too many failed attempts)."""
     now = time.time()
-    attempts = _login_attempts.get(client_ip, [])
-    # Prune old attempts outside the window
-    attempts = [t for t in attempts if now - t < _LOGIN_WINDOW]
-    _login_attempts[client_ip] = attempts
-    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-        return True
-    return False
+    # Prune expired IPs so the map cannot grow unbounded on public deployments
+    for ip in list(_login_attempts):
+        _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < _LOGIN_WINDOW]
+        if not _login_attempts[ip]:
+            del _login_attempts[ip]
+    return len(_login_attempts.get(client_ip, [])) >= _LOGIN_MAX_ATTEMPTS
 
 def _record_login_attempt(client_ip: str):
     _login_attempts.setdefault(client_ip, []).append(time.time())
@@ -2324,8 +2522,12 @@ def _record_login_attempt(client_ip: str):
 async def login(req: LoginRequest, request: Request, response: Response):
     client_ip = request.client.host if request.client else "unknown"
     if _check_login_rate(client_ip):
-        await asyncio.sleep(_LOGIN_COOLDOWN)
-        raise HTTPException(429, "Too many login attempts — try again later")
+        # Reject immediately with Retry-After — never hold the event loop
+        return JSONResponse(
+            {"detail": "Too many login attempts — try again later"},
+            status_code=429,
+            headers={"Retry-After": str(_LOGIN_COOLDOWN)},
+        )
     acc = _load_account()
     if not acc:
         raise HTTPException(404, "No account exists")

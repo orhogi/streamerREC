@@ -4,1899 +4,661 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamRec</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%236366f1'/><circle cx='50' cy='50' r='20' fill='%23ffffff'/><circle cx='50' cy='50' r='10' fill='%23ef4444'/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23e11d48'/><circle cx='50' cy='50' r='24' fill='%23fff'/><circle cx='50' cy='50' r='11' fill='%23e11d48'/></svg>">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0c10;--panel:#12141a;--panel2:#171a21;--card:#15171e;
+  --line:#23262f;--line2:#2e323d;
+  --text:#e8eaf0;--dim:#9aa1af;--mut:#5d6472;
+  --acc:#e11d48;--acc-dim:rgba(225,29,72,.14);--acc-line:rgba(225,29,72,.4);
+  --ok:#34d399;--ok-dim:rgba(52,211,153,.12);
+  --warn:#fbbf24;--blue:#60a5fa;
+  --mono:ui-monospace,'Cascadia Mono','SF Mono',Consolas,monospace;
+}
+html.light{
+  --bg:#f4f5f7;--panel:#fff;--panel2:#fafbfc;--card:#fff;
+  --line:#e4e6ea;--line2:#d3d7de;
+  --text:#171923;--dim:#4d5560;--mut:#8b93a0;
+  --acc-dim:rgba(225,29,72,.08);--acc-line:rgba(225,29,72,.35);
+  --ok-dim:rgba(16,150,100,.1);
+}
+html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select{font-family:inherit;color:var(--text)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
 
-:root {
-  --bg: #090a10;
-  --panel: rgba(18, 20, 32, 0.7);
-  --panel-solid: #121420;
-  --card: rgba(24, 27, 44, 0.6);
-  --card-hover: rgba(30, 34, 56, 0.85);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(99, 102, 241, 0.35);
-  --border-focus: #6366f1;
-  --text: #f1f5f9;
-  --text-dim: #94a3b8;
-  --text-muted: #64748b;
-  
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.25);
-  
-  --red: #f43f5e;
-  --red-glow: rgba(244, 63, 94, 0.25);
-  --green: #10b981;
-  --amber: #f59e0b;
-  --purple: #a855f7;
+.shell{height:100vh;display:flex;flex-direction:column}
 
-  --sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-}
+/* ── Header ── */
+header{height:56px;flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.brand-dot{width:26px;height:26px;border-radius:8px;background:var(--acc);display:grid;place-items:center;flex-shrink:0}
+.brand-dot svg{width:14px;height:14px}
+.brand small{font-family:var(--mono);font-size:10px;color:var(--mut);font-weight:600;margin-left:4px}
+nav{display:flex;gap:2px;margin-left:8px}
+.nav-btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--dim);transition:.15s}
+.nav-btn:hover{color:var(--text);background:var(--panel2)}
+.nav-btn.active{color:var(--text);background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line2)}
+.nav-btn .dot{display:none;width:6px;height:6px;border-radius:50%;background:var(--acc);margin-left:6px;vertical-align:middle;animation:pulse 1.6s infinite}
+.nav-btn .dot.on{display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hd-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.slots{font-family:var(--mono);font-size:11px;color:var(--mut);padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+.hd-btn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;color:var(--dim);border:1px solid var(--line);background:var(--panel2);transition:.15s}
+.hd-btn:hover{color:var(--text);border-color:var(--line2)}
+.hd-btn svg{width:15px;height:15px}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);font-size:12px;font-weight:600;color:var(--dim);transition:.15s}
+.user-chip:hover{color:var(--text);border-color:var(--line2)}
+.user-chip .uav{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
 
-html.light {
-  --bg: #f8fafc;
-  --panel: rgba(255, 255, 255, 0.85);
-  --panel-solid: #ffffff;
-  --card: rgba(241, 245, 249, 0.7);
-  --card-hover: rgba(255, 255, 255, 0.95);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(99, 102, 241, 0.4);
-  --text: #0f172a;
-  --text-dim: #475569;
-  --text-muted: #94a3b8;
-}
+.main{flex:1;overflow:hidden;position:relative}
+.view{display:none;height:100%;flex-direction:column;overflow:hidden}
+.view.active{display:flex}
 
-html, body {
-  height: 100%;
-  font-family: var(--sans);
-  background-color: var(--bg);
-  color: var(--text);
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+/* ── Toolbar ── */
+.toolbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+.search{position:relative;flex:1;max-width:300px}
+.search input{width:100%;height:34px;padding:0 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:13px;outline:none;transition:.15s}
+.search input:focus{border-color:var(--acc-line)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--mut);pointer-events:none}
+.search input{padding-left:30px}
+select.sel{height:34px;padding:0 26px 0 10px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:12px;font-weight:500;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='9' height='5' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235d6472' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;cursor:pointer}
+.tb-spacer{flex:1}
+.btn{height:34px;padding:0 14px;border-radius:8px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn svg{width:13px;height:13px}
+.btn-acc{background:var(--acc);color:#fff}
+.btn-acc:hover{filter:brightness(1.1)}
+.btn-ghost{border:1px solid var(--line);background:var(--panel2);color:var(--dim)}
+.btn-ghost:hover{color:var(--text);border-color:var(--line2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 
-/* Background gradient orbs */
-.bg-glow {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-.bg-glow::before {
-  content: '';
-  position: absolute;
-  top: -20%;
-  left: 20%;
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(circle, rgba(99,102,241,0.07) 0%, transparent 65%);
-  filter: blur(80px);
-}
-.bg-glow::after {
-  content: '';
-  position: absolute;
-  bottom: -20%;
-  right: 10%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(244,63,94,0.05) 0%, transparent 65%);
-  filter: blur(80px);
-}
+.scroll{flex:1;overflow-y:auto;padding:18px}
 
-/* Layout */
-.app-shell {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+/* ── Channel cards ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:80px 20px;color:var(--mut)}
+.empty svg{width:44px;height:44px;opacity:.35}
+.empty b{font-size:15px;color:var(--dim)}
+.empty span{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:11px;transition:.15s}
+.card:hover{border-color:var(--line2)}
+.card.rec{border-color:var(--acc-line)}
+.card.live{border-color:rgba(52,211,153,.4)}
+.card-top{display:flex;align-items:center;gap:11px}
+.av{position:relative;width:44px;height:44px;flex-shrink:0}
+.av img,.av .ini{width:44px;height:44px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+.av .ini{display:grid;place-items:center;background:var(--panel2);font-weight:700;font-size:16px;color:var(--dim)}
+.av .plat{position:absolute;bottom:-4px;right:-4px;width:19px;height:19px;border-radius:6px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;font-size:10px}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.csub{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.badge{flex-shrink:0;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:4px 8px;border-radius:6px;text-transform:uppercase}
+.badge.rec{background:var(--acc-dim);color:var(--acc);border:1px solid var(--acc-line);animation:pulse 1.6s infinite}
+.badge.live{background:var(--ok-dim);color:var(--ok);border:1px solid rgba(52,211,153,.35)}
+.badge.off{background:var(--panel2);color:var(--mut);border:1px solid var(--line)}
+.stitle{font-size:12px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metrics{display:flex;gap:6px;flex-wrap:wrap}
+.metric{font-family:var(--mono);font-size:10.5px;color:var(--dim);background:var(--acc-dim);border:1px solid var(--acc-line);border-radius:6px;padding:3px 7px}
+.cact{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px}
+.cact-l{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--mut)}
+.cact-r{display:flex;gap:5px}
+.ibtn{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--dim);border:1px solid transparent;transition:.15s}
+.ibtn:hover{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.ibtn.rec-on{color:#fff;background:var(--acc)}
+.ibtn.rec-on:hover{filter:brightness(1.12)}
+.ibtn svg{width:13px;height:13px}
+.sw{position:relative;width:32px;height:18px;background:var(--line2);border-radius:99px;cursor:pointer;transition:.2s}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw.on{background:var(--acc)}
+.sw.on::after{transform:translateX(14px)}
 
-/* Header */
-.app-header {
-  height: 64px;
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  flex-shrink: 0;
-}
+/* ── Recordings ── */
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.rec-card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.rec-thumb{position:relative;aspect-ratio:16/9;background:var(--panel2);display:grid;place-items:center;color:var(--mut);cursor:pointer}
+.rec-thumb svg{width:34px;height:34px;opacity:.4}
+.rec-thumb .dur{position:absolute;bottom:8px;right:8px;font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.7);color:#fff;padding:2px 6px;border-radius:5px}
+.rec-thumb .fav{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:7px;background:rgba(0,0,0,.55);display:grid;place-items:center;color:#fbbf24}
+.rec-thumb .fav svg{width:13px;height:13px;opacity:1}
+.rec-body{padding:11px 13px;display:flex;flex-direction:column;gap:8px}
+.rec-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-meta{display:flex;gap:8px;font-size:11px;color:var(--mut);font-family:var(--mono);flex-wrap:wrap}
+.rec-act{display:flex;gap:5px;border-top:1px solid var(--line);padding:9px 13px}
+.rec-act .ibtn{width:29px;height:28px}
+.rec-status{font-size:11px;font-weight:700}
+.rec-status.completed{color:var(--ok)}.rec-status.error{color:var(--acc)}.rec-status.archived{color:var(--blue)}
 
-.brand-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.brand-logo {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 4px 16px var(--primary-glow);
-}
-.brand-title {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(90deg, var(--text), var(--text-dim));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.brand-badge {
-  font-size: 10px;
-  font-family: var(--mono);
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: rgba(99, 102, 241, 0.12);
-  color: var(--primary);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-}
+/* ── Settings ── */
+.set-wrap{display:flex;flex:1;overflow:hidden}
+.set-nav{width:190px;flex-shrink:0;border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:2px;background:var(--panel)}
+.set-nav button{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--dim);text-align:left;transition:.15s}
+.set-nav button:hover{color:var(--text);background:var(--panel2)}
+.set-nav button.active{color:var(--acc);background:var(--acc-dim)}
+.set-nav svg{width:14px;height:14px;flex-shrink:0}
+.set-body{flex:1;overflow-y:auto;padding:24px 28px;max-width:760px}
+.sgroup{margin-bottom:24px}
+.sgroup h3{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin-bottom:9px}
+.sbox{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:none}
+.srow .lbl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.srow .lbl b{font-size:13px;font-weight:600}
+.srow .lbl span{font-size:11.5px;color:var(--mut);line-height:1.45}
+.tin{height:32px;padding:0 10px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-family:var(--mono);font-size:12px;outline:none}
+.tin:focus{border-color:var(--acc-line)}
 
-.header-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.15);
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-}
-.h-nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.h-nav-btn:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.04);
-}
-.h-nav-btn.active {
-  color: #fff;
-  background: var(--primary);
-  box-shadow: 0 2px 10px var(--primary-glow);
-}
-.h-nav-badge {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 8px var(--red);
-}
+/* ── Log drawer ── */
+.log-drawer{position:fixed;left:0;right:0;bottom:0;height:230px;background:var(--panel);border-top:1px solid var(--line2);z-index:400;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.3,1)}
+.log-drawer.open{transform:translateY(0)}
+.log-hd{height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:600;color:var(--dim)}
+.log-bd{flex:1;overflow-y:auto;padding:8px 14px;font-family:var(--mono);font-size:11px;line-height:1.65;color:var(--dim)}
+.log-bd .err{color:var(--acc)}
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+/* ── Modal / toast ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:900;display:none;align-items:center;justify-content:center;padding:18px}
+.ov.open{display:flex}
+.modal{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:700}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.fg input,.fg select{height:34px;padding:0 10px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:13px;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--acc-line)}
+.mrow{display:flex;gap:10px}.mrow>*{flex:1}
+.mact{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--line2);padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35);transform:translateY(16px);opacity:0;pointer-events:none;transition:.2s;z-index:999;max-width:360px}
+#toast.show{transform:translateY(0);opacity:1}
 
-/* User avatar / Guest */
-.user-btn {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 4px 12px 4px 4px;
-  border-radius: 99px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.user-btn:hover {
-  border-color: var(--border-hover);
-  background: var(--card-hover);
-}
-.user-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-}
-
-/* Main Workspace */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Views */
-.view-container {
-  display: none;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-.view-container.active {
-  display: flex;
-}
-
-/* Toolbar in Channels */
-.sub-toolbar {
-  height: 56px;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.toolbar-left, .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.search-box {
-  position: relative;
-  width: 260px;
-}
-.search-box svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-}
-.search-input {
-  width: 100%;
-  height: 36px;
-  padding: 0 12px 0 36px;
-  border-radius: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  transition: all 0.2s;
-}
-.search-input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--primary-glow);
-  background: var(--panel-solid);
-}
-
-.custom-select {
-  height: 36px;
-  padding: 0 28px 0 12px;
-  border-radius: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 500;
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394A3B8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  transition: all 0.2s;
-}
-.custom-select:focus {
-  border-color: var(--border-focus);
-}
-
-.btn-primary {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 10px;
-  background: var(--primary);
-  border: none;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px var(--primary-glow);
-}
-.btn-primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--primary-glow);
-}
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-ghost {
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-ghost:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--card-hover);
-}
-
-/* Channels View */
-.channels-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
-.channels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 16px;
-}
-
-/* Channel Card */
-.channel-card {
-  background: var(--card);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-}
-.channel-card:hover {
-  border-color: var(--border-hover);
-  background: var(--card-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-.channel-card.recording {
-  border-color: rgba(244, 63, 94, 0.4);
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.12);
-}
-.channel-card.live:not(.recording) {
-  border-color: rgba(16, 185, 129, 0.35);
-}
-
-.card-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.avatar-box {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-}
-.channel-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-}
-.platform-pill {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: #111;
-  border: 2px solid var(--panel-solid);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-}
-
-.card-header-info {
-  flex: 1;
-  min-width: 0;
-}
-.channel-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.channel-subtitle {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-family: var(--mono);
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 8px;
-  text-transform: uppercase;
-}
-.status-badge.live {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--green);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-.status-badge.recording {
-  background: rgba(244, 63, 94, 0.15);
-  color: var(--red);
-  border: 1px solid rgba(244, 63, 94, 0.3);
-  animation: pulse-red 2s infinite;
-}
-@keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
-  50% { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
-}
-.status-badge.idle {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
-
-.stream-title-text {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  background: rgba(0, 0, 0, 0.2);
-  padding: 8px 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border: 1px solid var(--border);
-  user-select: none;
-}
-
-.metrics-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  padding-top: 4px;
-}
-.metrics-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.card-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-  margin-top: 2px;
-}
-.actions-left, .actions-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.icon-action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.icon-action-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border-color: var(--border);
-}
-.icon-action-btn.danger:hover {
-  background: rgba(244, 63, 94, 0.15);
-  color: var(--red);
-  border-color: rgba(244, 63, 94, 0.3);
-}
-.icon-action-btn.rec-btn {
-  color: var(--red);
-  background: rgba(244, 63, 94, 0.1);
-  border-color: rgba(244, 63, 94, 0.2);
-}
-.icon-action-btn.rec-btn:hover {
-  background: rgba(244, 63, 94, 0.2);
-}
-
-/* Switch toggle */
-.switch-control {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  cursor: pointer;
-  transition: background 0.2s;
-  border: 1px solid var(--border);
-}
-.switch-control.active {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-.switch-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-}
-.switch-control.active .switch-knob {
-  transform: translateX(16px);
-}
-
-/* Settings View Layout */
-.settings-wrapper {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-.settings-sidebar {
-  width: 240px;
-  border-right: 1px solid var(--border);
-  padding: 20px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.08);
-}
-.settings-side-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.18s;
-}
-.settings-side-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-}
-.settings-side-btn.active {
-  background: var(--primary-glow);
-  color: var(--primary);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-.settings-scroll-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px 40px;
-  max-width: 800px;
-}
-.settings-card-group {
-  margin-bottom: 32px;
-}
-.settings-group-header {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--primary);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.settings-box {
-  background: var(--panel-solid);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-}
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.settings-row:last-child {
-  border-bottom: none;
-}
-.settings-label-box {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding-right: 16px;
-}
-.settings-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-.settings-desc {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.text-input {
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  outline: none;
-  transition: all 0.18s;
-}
-.text-input:focus {
-  border-color: var(--border-focus);
-}
-
-/* Modals / Drawers */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.modal-overlay.open {
-  display: flex;
-}
-.modal-card {
-  width: 100%;
-  max-width: 520px;
-  background: var(--panel-solid);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 26px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes modal-pop {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.field-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.field-row {
-  display: flex;
-  gap: 10px;
-}
-.field-row > * {
-  flex: 1;
-}
-
-/* Log drawer */
-.log-drawer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 240px;
-  background: #08090f;
-  border-top: 1px solid var(--border);
-  z-index: 500;
-  display: flex;
-  flex-direction: column;
-  transform: translateY(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.log-drawer.open {
-  transform: translateY(0);
-}
-.log-header {
-  height: 40px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.02);
-}
-.log-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 16px;
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.6;
-  color: #94a3b8;
-}
-.log-line.err { color: #f87171; }
-
-/* Toast */
-#toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--panel-solid);
-  border: 1px solid var(--border);
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  box-shadow: 0 12px 36px rgba(0,0,0,0.4);
-  transform: translateY(20px);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 2000;
-}
-#toast.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-/* Empty state */
-.empty-view {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  gap: 16px;
-  color: var(--text-muted);
-}
-.empty-view svg {
-  width: 48px;
-  height: 48px;
-  opacity: 0.3;
+/* ── Mobile ── */
+@media(max-width:720px){
+  header{padding:0 12px;gap:8px}
+  .brand small{display:none}
+  .slots{display:none}
+  .user-chip span{display:none}
+  .set-wrap{flex-direction:column}
+  .set-nav{width:100%;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px 10px}
+  .set-nav button{white-space:nowrap;flex-shrink:0}
+  .toolbar{padding:10px 12px;flex-wrap:wrap}
+  .scroll{padding:12px}
+  .set-body{padding:16px 14px}
 }
 </style>
 </head>
 <body>
-
-<div class="bg-glow"></div>
-
-<div class="app-shell">
-  <!-- Header -->
-  <header class="app-header">
-    <div class="brand-section">
-      <div class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-          <circle cx="12" cy="12" r="8"/>
-        </svg>
-      </div>
-      <div>
-        <span class="brand-title">StreamRec</span>
-      </div>
-      <span class="brand-badge" id="slot-indicator">0/6 slots</span>
-    </div>
-
-    <!-- Center Navigation -->
-    <nav class="header-nav">
-      <button class="h-nav-btn active" id="tab-channels" onclick="switchView('channels')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        Channels
-        <span class="h-nav-badge" id="live-indicator-dot" style="display:none"></span>
-      </button>
-      <button class="h-nav-btn" id="tab-settings" onclick="switchView('settings')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Settings
-      </button>
-    </nav>
-
-    <!-- User / Theme Controls -->
-    <div class="header-actions">
-      <button class="btn-ghost" onclick="toggleTheme()" style="width:36px;padding:0;justify-content:center" title="Toggle Theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" id="theme-ico"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      </button>
-      <button class="user-btn" onclick="openWelcome(false)">
-        <div class="user-avatar" id="headerAvatar">G</div>
-        <span id="headerUsername">Guest</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Content -->
-  <div class="main-content">
-
-    <!-- VIEW: CHANNELS -->
-    <div class="view-container active" id="view-channels">
-      <div class="sub-toolbar">
-        <div class="toolbar-left">
-          <div class="search-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="channelSearch" placeholder="Search streamers, tags…" oninput="filterCards()">
-          </div>
-          <select class="custom-select" id="channelSort" onchange="renderChannels()">
-            <option value="custom">Custom Order</option>
-            <option value="name_asc">Name A-Z</option>
-            <option value="name_desc">Name Z-A</option>
-            <option value="platform">Platform</option>
-            <option value="recent">Recently Added</option>
-            <option value="live_first">Live First</option>
-          </select>
-        </div>
-        <div class="toolbar-right">
-          <button class="btn-primary" onclick="openAddModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Channel
-          </button>
-        </div>
-      </div>
-
-      <div class="channels-container">
-        <div class="channels-grid" id="channelsGrid"></div>
-      </div>
-    </div>
-
-    <!-- VIEW: SETTINGS -->
-    <div class="view-container" id="view-settings">
-      <div class="sub-toolbar">
-        <div class="toolbar-left">
-          <span style="font-weight:700;font-size:16px;color:var(--text)">Settings &amp; Configuration</span>
-        </div>
-        <div class="toolbar-right">
-          <button class="btn-ghost" onclick="loadSettings()">Reset Defaults</button>
-          <button class="btn-primary" onclick="saveSettings()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save Changes
-          </button>
-        </div>
-      </div>
-
-      <div class="settings-wrapper">
-        <!-- Sidebar -->
-        <div class="settings-sidebar">
-          <button class="settings-side-btn active" onclick="switchSettingsSection('general', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            General &amp; Storage
-          </button>
-          <button class="settings-side-btn" onclick="switchSettingsSection('recording', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
-            Recording &amp; Quality
-          </button>
-          <button class="settings-side-btn" onclick="switchSettingsSection('network', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Network &amp; Retry
-          </button>
-          <button class="settings-side-btn" onclick="switchSettingsSection('notifications', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            Notifications
-          </button>
-          <button class="settings-side-btn" onclick="switchSettingsSection('cookies', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Cookies &amp; Auth
-          </button>
-          <button class="settings-side-btn" onclick="switchSettingsSection('system', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            System &amp; Backup
-          </button>
-        </div>
-
-        <!-- Panes -->
-        <div class="settings-scroll-area">
-          <!-- Pane: General -->
-          <div class="settings-pane-box active" id="spane-general">
-            <div class="settings-card-group">
-              <div class="settings-group-header">Performance &amp; Hardware</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Potato / Low-Power Mode</span>
-                    <span class="settings-desc">Reduces CPU, RAM, and disk writes for Raspberry Pi or minimal hardware</span>
-                  </div>
-                  <div class="switch-control" id="s-pi-mode" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-card-group">
-              <div class="settings-group-header">Monitoring &amp; Storage</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Check Interval</span>
-                    <span class="settings-desc">How often channels are checked for live status</span>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input class="text-input" type="number" id="s-interval" min="10" max="3600" value="60" style="width:70px">
-                    <span style="font-size:12px;color:var(--text-muted)">sec</span>
-                  </div>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Auto-Record when Live</span>
-                    <span class="settings-desc">Immediately begin stream capture once any channel goes online</span>
-                  </div>
-                  <div class="switch-control" id="s-record-on-add" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Disk Storage</span>
-                    <span class="settings-desc">Total space consumed by recordings on disk</span>
-                  </div>
-                  <span style="font-family:var(--mono);font-size:12px;color:var(--text-dim)" id="diskText">—</span>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Recording Retention</span>
-                    <span class="settings-desc">Auto-delete recordings older than this (0 = keep forever)</span>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <input class="text-input" type="number" id="s-retention-days" min="0" max="3650" value="0" style="width:70px">
-                    <span style="font-size:12px;color:var(--text-muted)">days</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane: Recording -->
-          <div class="settings-pane-box" id="spane-recording" style="display:none">
-            <div class="settings-card-group">
-              <div class="settings-group-header">Resolution &amp; Formats</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Default Quality</span>
-                    <span class="settings-desc">Stream resolution applied to newly added channels</span>
-                  </div>
-                  <select class="custom-select" id="s-quality">
-                    <option value="best">Best (Source)</option>
-                    <option value="1080p">1080p</option>
-                    <option value="720p">720p</option>
-                    <option value="480p">480p</option>
-                    <option value="worst">Lowest</option>
-                  </select>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Default Format</span>
-                    <span class="settings-desc">Container format during recording</span>
-                  </div>
-                  <select class="custom-select" id="s-format">
-                    <option value="mp4">MP4</option>
-                    <option value="mkv">MKV</option>
-                    <option value="ts">TS</option>
-                  </select>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Auto-Convert to MP4</span>
-                    <span class="settings-desc">Losslessly stream-copy completed recordings to MP4 using ffmpeg</span>
-                  </div>
-                  <div class="switch-control" id="s-auto-convert" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Delete Source After Convert</span>
-                    <span class="settings-desc">Remove raw TS/MKV file after successful MP4 conversion</span>
-                  </div>
-                  <div class="switch-control" id="s-delete-original" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane: Network -->
-          <div class="settings-pane-box" id="spane-network" style="display:none">
-            <div class="settings-card-group">
-              <div class="settings-group-header">Proxy &amp; Reconnection</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Global Proxy</span>
-                    <span class="settings-desc">Applies to all recordings (HTTP/SOCKS5)</span>
-                  </div>
-                  <input class="text-input" type="text" id="s-proxy" placeholder="http://127.0.0.1:1080" style="width:220px">
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Extra yt-dlp Flags</span>
-                    <span class="settings-desc">Custom CLI arguments passed to yt-dlp</span>
-                  </div>
-                  <input class="text-input" type="text" id="s-extra-args" placeholder="--no-playlist" style="width:220px">
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Auto-Retry on Drop</span>
-                    <span class="settings-desc">Automatically reconnect when a live stream disconnects</span>
-                  </div>
-                  <div class="switch-control active" id="s-auto-retry" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Max Retries &amp; Delay</span>
-                    <span class="settings-desc">Number of retry attempts and seconds between attempts</span>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <input class="text-input" type="number" id="s-max-retries" min="1" max="50" value="5" style="width:60px">
-                    <input class="text-input" type="number" id="s-retry-delay" min="5" max="300" value="15" style="width:60px">
-                    <span style="font-size:12px;color:var(--text-muted)">sec</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane: Notifications -->
-          <div class="settings-pane-box" id="spane-notifications" style="display:none">
-            <div class="settings-card-group">
-              <div class="settings-group-header">Webhooks</div>
-              <div class="settings-box">
-                <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:12px">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Webhook URL</span>
-                    <span class="settings-desc">Sends rich Discord embeds with streamer avatar, duration, and status, or clean JSON for Slack/ntfy</span>
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <input class="text-input" type="text" id="s-webhook-url" placeholder="https://discord.com/api/webhooks/…" style="flex:1">
-                    <button class="btn-ghost" onclick="testWebhook()" id="btnTestWebhook">Test Webhook</button>
-                  </div>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Auto-Stop Stalled Streams</span>
-                    <span class="settings-desc">Force-stop recordings that receive no new data for 2 minutes</span>
-                  </div>
-                  <div class="switch-control" id="s-auto-stop-stalled" onclick="toggleSwitch(this)">
-                    <div class="switch-knob"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane: Cookies -->
-          <div class="settings-pane-box" id="spane-cookies" style="display:none">
-            <div class="settings-card-group">
-              <div class="settings-group-header">Cookies File</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Active Cookies File</span>
-                    <span class="settings-desc">Used for authenticated, age-restricted, or sub-only streams</span>
-                  </div>
-                  <select class="custom-select" id="s-cookies-file" style="min-width:140px">
-                    <option value="">None</option>
-                  </select>
-                </div>
-                <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:12px">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Upload Netscape Cookies</span>
-                    <span class="settings-desc">Export .txt cookies using browser extension and upload here</span>
-                  </div>
-                  <div style="display:flex;gap:10px;align-items:center">
-                    <label class="btn-ghost" style="cursor:pointer">
-                      Choose .txt file
-                      <input type="file" accept=".txt,.json" style="display:none" onchange="uploadCookies(this)">
-                    </label>
-                    <span id="cookiesUploadStatus" style="font-size:12px;color:var(--text-muted)"></span>
-                  </div>
-                  <div id="cookiesList" style="width:100%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pane: System -->
-          <div class="settings-pane-box" id="spane-system" style="display:none">
-            <div class="settings-card-group">
-              <div class="settings-group-header">System &amp; Backups</div>
-              <div class="settings-box">
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">yt-dlp Core Engine</span>
-                    <span class="settings-desc" id="ytdlpVersion">Loading...</span>
-                  </div>
-                  <button class="btn-ghost" onclick="updateYtdlp()" id="ytdlpUpdateBtn">Update yt-dlp</button>
-                </div>
-                <div class="settings-row">
-                  <div class="settings-label-box">
-                    <span class="settings-title">Configuration Backup</span>
-                    <span class="settings-desc">Export or restore all channels and settings</span>
-                  </div>
-                  <div style="display:flex;gap:8px">
-                    <button class="btn-ghost" onclick="exportConfig()">Export JSON</button>
-                    <label class="btn-ghost" style="cursor:pointer">
-                      Import JSON
-                      <input type="file" accept=".json" style="display:none" onchange="importConfig(this)">
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
+<div class="shell">
+<header>
+  <div class="brand">
+    <div class="brand-dot"><svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="7"/></svg></div>
+    StreamRec
   </div>
-</div>
-
-<!-- Modal: Add Channel -->
-<div class="modal-overlay" id="addOverlay" onclick="if(event.target===this)closeAddModal()">
-  <div class="modal-card">
-    <div class="modal-header">
-      <span class="modal-title">Add Monitored Channel</span>
-      <button class="icon-action-btn" onclick="closeAddModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <div class="field-group">
-      <label class="field-label">Stream or Channel URL</label>
-      <input class="text-input" id="addUrl" placeholder="https://twitch.tv/channel or youtube.com/live/…" oninput="detectPlatform()">
-      <div id="addPlatformDetect" style="font-size:11px;color:var(--primary);margin-top:2px"></div>
-    </div>
-
-    <div class="field-row">
-      <div class="field-group">
-        <label class="field-label">Quality</label>
-        <select class="custom-select" id="addQuality">
-          <option value="">Global Default</option>
-          <option value="best">Best</option>
-          <option value="1080p">1080p</option>
-          <option value="720p">720p</option>
-          <option value="480p">480p</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Format</label>
-        <select class="custom-select" id="addFormat">
-          <option value="">Global Default</option>
-          <option value="mp4">MP4</option>
-          <option value="mkv">MKV</option>
-          <option value="ts">TS</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field-row">
-      <div class="field-group">
-        <label class="field-label">Max Streams to Keep</label>
-        <input class="text-input" type="number" id="addMaxStreams" min="0" max="100" value="0" placeholder="0 = unlimited">
-      </div>
-      <div class="field-group">
-        <label class="field-label">Max Duration (min)</label>
-        <input class="text-input" type="number" id="addMaxDuration" min="0" max="1440" value="0" placeholder="0 = unlimited">
-      </div>
-    </div>
-
-    <div class="field-group">
-      <label class="field-label">Private Notes</label>
-      <input class="text-input" id="addNotes" placeholder="Optional notes…">
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px">
-      <button class="btn-ghost" onclick="closeAddModal()">Cancel</button>
-      <button class="btn-primary" id="addConfirmBtn" onclick="confirmAdd()">Add Streamer</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Channel Settings -->
-<div class="modal-overlay" id="chSettingsOverlay" onclick="if(event.target===this)closeChSettings()">
-  <div class="modal-card">
-    <div class="modal-header">
-      <span class="modal-title" id="chSettingsTitle">Channel Settings</span>
-      <button class="icon-action-btn" onclick="closeChSettings()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <input type="hidden" id="chSettingsId">
-
-    <div class="field-row">
-      <div class="field-group">
-        <label class="field-label">Quality Override</label>
-        <select class="custom-select" id="chQuality">
-          <option value="">Global Default</option>
-          <option value="best">Best</option>
-          <option value="1080p">1080p</option>
-          <option value="720p">720p</option>
-          <option value="480p">480p</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Format Override</label>
-        <select class="custom-select" id="chFormat">
-          <option value="">Global Default</option>
-          <option value="mp4">MP4</option>
-          <option value="mkv">MKV</option>
-          <option value="ts">TS</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field-row">
-      <div class="field-group">
-        <label class="field-label">Max Streams to Keep</label>
-        <input class="text-input" type="number" id="chMaxStreams" min="0" max="100" value="0">
-      </div>
-      <div class="field-group">
-        <label class="field-label">Max Duration (min)</label>
-        <input class="text-input" type="number" id="chMaxDuration" min="0" max="1440" value="0">
-      </div>
-    </div>
-
-    <div class="field-group">
-      <label class="field-label">Notes</label>
-      <input class="text-input" id="chNotes" placeholder="Notes…">
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
-      <button class="btn-ghost" onclick="deleteChannel(document.getElementById('chSettingsId').value); closeChSettings();" style="color:var(--red)">Delete Channel</button>
-      <div style="display:flex;gap:8px">
-        <button class="btn-ghost" onclick="closeChSettings()">Cancel</button>
-        <button class="btn-primary" onclick="saveChSettings()">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Log Drawer -->
-<div class="log-drawer" id="logDrawer">
-  <div class="log-header">
-    <span id="logTitle">LOGS</span>
-    <button class="icon-action-btn" onclick="closeLog()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  <nav>
+    <button class="nav-btn active" id="tab-channels" onclick="switchView('channels')">Channels<span class="dot" id="liveDot"></span></button>
+    <button class="nav-btn" id="tab-recordings" onclick="switchView('recordings')">Recordings</button>
+    <button class="nav-btn" id="tab-settings" onclick="switchView('settings')">Settings</button>
+  </nav>
+  <div class="hd-right">
+    <span class="slots" id="slots">0/6</span>
+    <button class="hd-btn" onclick="toggleTheme()" title="Theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIco"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+    </button>
+    <button class="user-chip" onclick="openWelcome()">
+      <span class="uav" id="hdAv">G</span><span id="hdName">Guest</span>
     </button>
   </div>
-  <div class="log-content" id="logBody"></div>
+</header>
+<div class="main">
+
+  <!-- CHANNELS -->
+  <div class="view active" id="view-channels">
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="q" placeholder="Search channels…" oninput="renderChannels()">
+      </div>
+      <select class="sel" id="sortSel" onchange="renderChannels()">
+        <option value="custom">Custom order</option>
+        <option value="name">Name A-Z</option>
+        <option value="platform">Platform</option>
+        <option value="recent">Recently added</option>
+        <option value="live">Live first</option>
+      </select>
+      <div class="tb-spacer"></div>
+      <button class="btn btn-acc" onclick="openAdd()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Add Channel
+      </button>
+    </div>
+    <div class="scroll"><div class="grid" id="grid"></div></div>
+  </div>
+
+  <!-- RECORDINGS -->
+  <div class="view" id="view-recordings">
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="rq" placeholder="Search recordings…" oninput="renderRecordings()">
+      </div>
+      <div class="tb-spacer"></div>
+      <span style="font-size:12px;color:var(--mut)" id="recCount"></span>
+    </div>
+    <div class="scroll"><div class="rec-grid" id="recGrid"></div></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="set-wrap">
+      <div class="set-nav">
+        <button class="active" data-pane="general" onclick="setPane('general',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>General</button>
+        <button data-pane="recording" onclick="setPane('recording',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>Recording</button>
+        <button data-pane="network" onclick="setPane('network',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>Network</button>
+        <button data-pane="notify" onclick="setPane('notify',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>Notifications</button>
+        <button data-pane="cookies" onclick="setPane('cookies',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Cookies</button>
+        <button data-pane="system" onclick="setPane('system',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9-6-18-3 9H2"/></svg>System</button>
+      </div>
+      <div class="set-body">
+        <div class="sgroup" id="pane-general">
+          <h3>Performance</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Low-Power Mode</b><span>Reduces CPU/RAM/IO usage for Raspberry Pi and similar devices</span></div><div class="sw" id="sw-pi" onclick="tgl(this)"></div></div>
+          </div>
+          <h3 style="margin-top:20px">Storage</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Check Interval</b><span>How often channels are polled for live status</span></div><div style="display:flex;gap:6px;align-items:center"><input class="tin" type="number" id="in-interval" min="10" max="3600" style="width:70px">sec</div></div>
+            <div class="srow"><div class="lbl"><b>Auto-Record All</b><span>Monitor and auto-record every channel, even paused ones</span></div><div class="sw" id="sw-autoall" onclick="tgl(this)"></div></div>
+            <div class="srow"><div class="lbl"><b>Retention</b><span>Auto-delete recordings older than this (0 = keep forever)</span></div><div style="display:flex;gap:6px;align-items:center"><input class="tin" type="number" id="in-retention" min="0" max="3650" style="width:70px">days</div></div>
+            <div class="srow"><div class="lbl"><b>Disk Usage</b><span id="diskDetail">—</span></div><span style="font-family:var(--mono);font-size:12px;color:var(--dim)" id="diskText">—</span></div>
+          </div>
+        </div>
+        <div class="sgroup" id="pane-recording" style="display:none">
+          <h3>Quality &amp; Format</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Default Quality</b><span>Applied to new channels</span></div><select class="sel" id="in-quality"><option value="best">Best</option><option value="1080p">1080p</option><option value="720p">720p</option><option value="480p">480p</option><option value="worst">Lowest</option></select></div>
+            <div class="srow"><div class="lbl"><b>Default Format</b><span>Container for recordings</span></div><select class="sel" id="in-format"><option value="mp4">MP4</option><option value="mkv">MKV</option><option value="ts">TS</option></select></div>
+            <div class="srow"><div class="lbl"><b>Auto-Convert to MP4</b><span>Lossless remux of finished recordings</span></div><div class="sw" id="sw-conv" onclick="tgl(this)"></div></div>
+            <div class="srow"><div class="lbl"><b>Delete Original</b><span>Remove source file after MP4 conversion</span></div><div class="sw" id="sw-del" onclick="tgl(this)"></div></div>
+          </div>
+          <h3 style="margin-top:20px">Limits</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Max Duration</b><span>Stop recordings after this (0 = unlimited)</span></div><div style="display:flex;gap:6px;align-items:center"><input class="tin" type="number" id="in-maxdur" min="0" max="1440" style="width:70px">min</div></div>
+            <div class="srow"><div class="lbl"><b>Auto-Stop Stalled</b><span>Stop when no data arrives for 2 minutes</span></div><div class="sw" id="sw-stall" onclick="tgl(this)"></div></div>
+          </div>
+        </div>
+        <div class="sgroup" id="pane-network" style="display:none">
+          <h3>Connection</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Global Proxy</b><span>HTTP/SOCKS5 proxy for all recordings</span></div><input class="tin" id="in-proxy" placeholder="socks5://…" style="width:200px"></div>
+            <div class="srow"><div class="lbl"><b>Extra yt-dlp Flags</b><span>Custom CLI arguments</span></div><input class="tin" id="in-extra" placeholder="--no-playlist" style="width:200px"></div>
+          </div>
+          <h3 style="margin-top:20px">Retries</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Auto-Retry on Drop</b><span>Reconnect automatically when a stream drops</span></div><div class="sw" id="sw-retry" onclick="tgl(this)"></div></div>
+            <div class="srow"><div class="lbl"><b>Max Retries / Delay</b><span>Reconnection attempts and wait time</span></div><div style="display:flex;gap:6px;align-items:center"><input class="tin" type="number" id="in-maxretry" min="1" max="50" style="width:58px"><input class="tin" type="number" id="in-retrydelay" min="5" max="300" style="width:58px">sec</div></div>
+          </div>
+        </div>
+        <div class="sgroup" id="pane-notify" style="display:none">
+          <h3>Webhooks</h3>
+          <div class="sbox">
+            <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px">
+              <div class="lbl"><b>Webhook URL</b><span>Discord embeds or generic JSON POST</span></div>
+              <div style="display:flex;gap:8px"><input class="tin" id="in-webhook" style="flex:1" placeholder="https://discord.com/api/webhooks/…"><button class="btn btn-ghost" onclick="testHook()">Test</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="sgroup" id="pane-cookies" style="display:none">
+          <h3>Cookies</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Active Cookies File</b><span>For age-restricted or members-only streams</span></div><select class="sel" id="in-cookies" style="min-width:140px"><option value="">None</option></select></div>
+            <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px">
+              <div class="lbl"><b>Upload</b><span>Netscape cookies.txt exported from a browser extension</span></div>
+              <label class="btn btn-ghost" style="cursor:pointer;justify-content:center">Choose file<input type="file" accept=".txt" style="display:none" onchange="upCookies(this)"></label>
+              <div id="cookieList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="sgroup" id="pane-system" style="display:none">
+          <h3>Engine</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>yt-dlp</b><span id="ydVer">loading…</span></div><button class="btn btn-ghost" id="ydBtn" onclick="updYd()">Update</button></div>
+          </div>
+          <h3 style="margin-top:20px">Backup</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Configuration</b><span>Export or restore channels and settings</span></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-ghost" onclick="exportCfg()">Export</button>
+                <label class="btn btn-ghost" style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="importCfg(this)"></label>
+              </div></div>
+          </div>
+          <h3 style="margin-top:20px">Feedback</h3>
+          <div class="sbox">
+            <div class="srow"><div class="lbl"><b>Report a Bug / Request a Feature</b><span>Found something broken or have an idea? Open an issue on GitHub — bug reports with logs attached get fixed fastest.</span></div>
+              <a class="btn btn-ghost" href="https://github.com/orhogi/streamerREC/issues" target="_blank" rel="noopener" style="text-decoration:none">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 016 0C17.3 4.7 18.3 5 18.3 5c.7 1.6.2 2.8.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
+                GitHub Issues
+              </a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 </div>
 
-<!-- Toast -->
+<!-- Log drawer -->
+<div class="log-drawer" id="logDrawer">
+  <div class="log-hd"><span id="logTitle">LOG</span><button class="ibtn" onclick="closeLog()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="log-bd" id="logBody"></div>
+</div>
+
+<!-- Add channel modal -->
+<div class="ov" id="addOv" onclick="if(event.target===this)closeAdd()">
+  <div class="modal">
+    <h2>Add Channel</h2>
+    <div class="fg"><label>Stream URL</label><input id="addUrl" placeholder="https://twitch.tv/…"></div>
+    <div class="mrow">
+      <div class="fg"><label>Quality</label><select id="addQ"><option value="">Default</option><option value="best">Best</option><option value="1080p">1080p</option><option value="720p">720p</option><option value="480p">480p</option></select></div>
+      <div class="fg"><label>Format</label><select id="addF"><option value="">Default</option><option value="mp4">MP4</option><option value="mkv">MKV</option><option value="ts">TS</option></select></div>
+    </div>
+    <div class="mrow">
+      <div class="fg"><label>Keep last</label><input class="tin" type="number" id="addKeep" value="0" min="0" style="width:100%"><span style="font-size:10px;color:var(--mut)">0 = unlimited</span></div>
+      <div class="fg"><label>Max duration</label><input class="tin" type="number" id="addDur" value="0" min="0" style="width:100%"><span style="font-size:10px;color:var(--mut)">0 = unlimited</span></div>
+    </div>
+    <div class="mact"><button class="btn btn-ghost" onclick="closeAdd()">Cancel</button><button class="btn btn-acc" id="addBtn" onclick="doAdd()">Add</button></div>
+  </div>
+</div>
+
+<!-- Channel settings modal -->
+<div class="ov" id="chOv" onclick="if(event.target===this)closeCh()">
+  <div class="modal">
+    <h2 id="chTitle">Settings</h2>
+    <input type="hidden" id="chId">
+    <div class="mrow">
+      <div class="fg"><label>Quality</label><select id="chQ"><option value="">Default</option><option value="best">Best</option><option value="1080p">1080p</option><option value="720p">720p</option><option value="480p">480p</option></select></div>
+      <div class="fg"><label>Format</label><select id="chF"><option value="">Default</option><option value="mp4">MP4</option><option value="mkv">MKV</option><option value="ts">TS</option></select></div>
+    </div>
+    <div class="mrow">
+      <div class="fg"><label>Keep last</label><input class="tin" type="number" id="chKeep" min="0" style="width:100%"></div>
+      <div class="fg"><label>Max duration</label><input class="tin" type="number" id="chDur" min="0" style="width:100%"></div>
+    </div>
+    <div class="fg"><label>Notes</label><input id="chNotes"></div>
+    <div class="mact" style="justify-content:space-between">
+      <button class="btn btn-ghost" style="color:var(--acc)" onclick="delCh()">Delete</button>
+      <div style="display:flex;gap:8px"><button class="btn btn-ghost" onclick="closeCh()">Cancel</button><button class="btn btn-acc" onclick="saveCh()">Save</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Account modal -->
+<div class="ov" id="accOv" onclick="if(event.target===this)closeAcc()">
+  <div class="modal">
+    <h2 id="accTitle">Account</h2>
+    <div id="accCreate" style="display:none;flex-direction:column;gap:14px">
+      <div class="fg"><label>Username</label><input id="acUser"></div>
+      <div class="fg"><label>Password</label><input type="password" id="acPass"></div>
+      <div class="fg"><label>Confirm</label><input type="password" id="acPass2"></div>
+      <div class="mact"><button class="btn btn-ghost" onclick="closeAcc()">Guest Mode</button><button class="btn btn-acc" onclick="createAcc()">Create</button></div>
+    </div>
+    <div id="accLogin" style="display:none;flex-direction:column;gap:14px">
+      <div class="fg"><label>Username</label><input id="alUser"></div>
+      <div class="fg"><label>Password</label><input type="password" id="alPass"></div>
+      <div class="mact"><button class="btn btn-acc" onclick="loginAcc()">Log In</button></div>
+    </div>
+    <div id="accProfile" style="display:none;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="uav" id="profAv" style="width:44px;height:44px;font-size:17px">G</span>
+        <div><b id="profName"></b><div style="font-size:11px;color:var(--mut)" id="profSince"></div></div>
+      </div>
+      <div class="mrow"><div class="fg"><label>Current password</label><input type="password" id="pcCur"></div><div class="fg"><label>New password</label><input type="password" id="pcNew"></div></div>
+      <div class="mact" style="justify-content:space-between"><button class="btn btn-ghost" style="color:var(--acc)" onclick="logoutAcc()">Log Out</button><button class="btn btn-acc" onclick="saveAcc()">Save</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
-const API = '';
-let channels = {};
-let globalSettings = {};
-let activeLogChId = null;
-let pollTimer = null;
-let pollInterval = 5000;
+const API='';
+let channels={}, recs={}, settings={}, acc={exists:false,authed:false};
+let pollTimer=null, logCh=null;
 
-// ── Helpers ──
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function fmtBytes(b) {
-  if (!b) return '0 B';
-  if (b < 1024) return b + ' B';
-  if (b < 1024**2) return (b/1024).toFixed(1) + ' KB';
-  if (b < 1024**3) return (b/1024**2).toFixed(1) + ' MB';
-  return (b/1024**3).toFixed(2) + ' GB';
-}
-function fmtDur(start) {
-  if (!start) return '00:00:00';
-  const s = Math.max(0, Math.floor(Date.now()/1000 - start));
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-}
-function timeAgo(ts) {
-  if (!ts) return 'never';
-  const s = Math.floor(Date.now()/1000 - ts);
-  if (s < 60) return s + 's ago';
-  if (s < 3600) return Math.floor(s/60) + 'm ago';
-  return Math.floor(s/3600) + 'h ago';
-}
+/* helpers */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function fmtB(b){if(!b)return'0 B';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB'}
+function fmtDur(s){if(!s)return'00:00';const n=Math.max(0,Math.floor(Date.now()/1e3-s));const h=~~(n/3600),m=~~(n%3600/60),ss=n%60;return(h?h+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0')}
+function ago(t){if(!t)return'never';const s=~~(Date.now()/1e3-t);return s<60?s+'s':s<3600?~~(s/60)+'m':~~(s/3600)+'h'}
+let tt;function toast(m,e){const t=$('toast');t.textContent=m;t.style.borderColor=e?'var(--acc)':'var(--line2)';t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2800)}
+async function api(path,opt){const r=await fetch(API+path,opt);if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch{}throw new Error(d||r.status)}return r.json()}
 
-let toastTimer;
-function toast(msg, err=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.borderColor = err ? 'var(--red)' : 'var(--border)';
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
+/* theme */
+function toggleTheme(){document.documentElement.classList.toggle('light');localStorage.streamrecTheme=document.documentElement.classList.contains('light')?'light':'dark'}
+if(localStorage.streamrecTheme==='light')document.documentElement.classList.add('light');
 
-// ── Views ──
-function switchView(view) {
-  document.querySelectorAll('.h-nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
-  document.getElementById('tab-' + view)?.classList.add('active');
-  document.getElementById('view-' + view)?.classList.add('active');
-  if (view === 'settings') {
-    loadSettings();
-    fetchYtdlpVersion();
-    fetchDisk();
-  }
+/* views */
+function switchView(v){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  $('tab-'+v)?.classList.add('active');$('view-'+v)?.classList.add('active');
+  if(v==='settings')loadSettingsUI();
+  if(v==='recordings')fetchRecordings();
 }
+function setPane(p,btn){document.querySelectorAll('.set-nav button').forEach(b=>b.classList.remove('active'));btn?.classList.add('active');document.querySelectorAll('.sgroup').forEach(g=>g.style.display='none');$('pane-'+p).style.display='block'}
+function tgl(el){el.classList.toggle('on')}
+const swOn=id=>$(id)?.classList.toggle('on',true);
 
-function switchSettingsSection(tab, btn) {
-  document.querySelectorAll('.settings-side-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.settings-pane-box').forEach(p => p.style.display = 'none');
-  if (btn) btn.classList.add('active');
-  const target = document.getElementById('spane-' + tab);
-  if (target) target.style.display = 'block';
-}
-
-function toggleSwitch(el) {
-  el.classList.toggle('active');
-}
-function setSwitch(id, on) {
-  const el = document.getElementById(id);
-  if (el) el.classList.toggle('active', !!on);
-}
-
-// ── Channels & Rendering ──
-function platEmoji(plat) {
-  const p = (plat || '').toLowerCase();
-  if (p.includes('twitch'))    return '🟣';
-  if (p.includes('youtube'))   return '🔴';
-  if (p.includes('tiktok'))    return '⚫';
-  if (p.includes('kick'))      return '🟢';
-  if (p.includes('bilibili'))  return '🔵';
-  return '📺';
-}
-
-function renderCard(ch) {
-  const isRec = ch.rec_status === 'recording' || ch.rec_status === 'starting';
-  const isLive = ch.is_live;
-  const monitoring = ch.monitoring !== false;
-  const name = ch.display_name || ch.platform || 'Streamer';
-  const initials = name.charAt(0).toUpperCase();
-
-  return `
-  <div class="channel-card ${isRec ? 'recording' : isLive ? 'live' : ''}" id="card-${ch.id}">
-    <div class="card-top">
-      <div class="avatar-box">
-        ${ch.avatar ? `<img class="channel-avatar" src="${esc(ch.avatar)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
-        <div class="channel-avatar" style="${ch.avatar ? 'display:none;' : ''}display:flex;align-items:center;justify-content:center;font-weight:700">${esc(initials)}</div>
-        <div class="platform-pill">${platEmoji(ch.platform)}</div>
-      </div>
-      <div class="card-header-info">
-        <div class="channel-name" title="${esc(name)}">${esc(name)}</div>
-        <div class="channel-subtitle">${esc(ch.platform)} · checked ${timeAgo(ch.last_checked)}</div>
-      </div>
-      <div class="status-badge ${isRec ? 'recording' : isLive ? 'live' : 'idle'}">
-        ${isRec ? '● RECORDING' : isLive ? '● LIVE' : monitoring ? 'MONITORING' : 'OFF'}
-      </div>
+/* channels */
+function platEmoji(p){p=(p||'').toLowerCase();return p.includes('twitch')?'🟣':p.includes('youtube')?'🔴':p.includes('tiktok')?'⚫':p.includes('kick')?'🟢':p.includes('bilibili')?'🔵':'📺'}
+function card(ch){
+  const isRec=ch.rec_status==='recording'||ch.rec_status==='starting';
+  const mon=ch.monitoring!==false;
+  const name=ch.display_name||ch.platform||'Streamer';
+  const ini=(name[0]||'?').toUpperCase();
+  return `<div class="card ${isRec?'rec':ch.is_live?'live':''}">
+  <div class="card-top">
+    <div class="av">
+      ${ch.avatar?`<img src="${esc(ch.avatar)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" alt="">`:''}
+      <div class="ini" style="${ch.avatar?'display:none':''}">${esc(ini)}</div>
+      <div class="plat">${platEmoji(ch.platform)}</div>
     </div>
-
-    ${ch.stream_title ? `<div class="stream-title-text" title="${esc(ch.stream_title)}">${esc(ch.stream_title)}</div>` : ''}
-
-    ${isRec ? `
-      <div class="metrics-bar">
-        <span class="metrics-pill">⏱️ <span class="ch-dur">${fmtDur(ch.rec_started)}</span></span>
-        <span class="metrics-pill">⚡ ${esc(ch.rec_speed || '—')}</span>
-        <span class="metrics-pill">💾 ${fmtBytes(ch.rec_bytes)}</span>
-      </div>
-    ` : ''}
-
-    <div class="card-actions">
-      <div class="actions-left">
-        <div class="switch-control ${monitoring ? 'active' : ''}" title="Toggle Auto-Monitoring" onclick="toggleMonitoring('${ch.id}')">
-          <div class="switch-knob"></div>
-        </div>
-        <span style="font-size:11px;color:var(--text-muted);font-weight:600">${monitoring ? 'Active' : 'Paused'}</span>
-      </div>
-      <div class="actions-right">
-        ${isRec ? `
-          <button class="icon-action-btn danger" title="Stop Recording" onclick="stopChannel('${ch.id}')">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-          </button>
-        ` : `
-          <button class="icon-action-btn rec-btn" title="Start Recording" onclick="recordChannel('${ch.id}')">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="12" cy="12" r="6"/></svg>
-          </button>
-        `}
-        <button class="icon-action-btn" title="View Logs" onclick="openLog('${ch.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="9" y2="18"/></svg>
-        </button>
-        <button class="icon-action-btn" title="Settings" onclick="openChSettings('${ch.id}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </button>
-      </div>
+    <div class="cinfo"><div class="cname">${esc(name)}</div><div class="csub">${esc(ch.platform||'')} · ${ago(ch.last_checked)} ago</div></div>
+    <span class="badge ${isRec?'rec':ch.is_live?'live':'off'}">${isRec?'REC':ch.is_live?'LIVE':mon?'WATCH':'OFF'}</span>
+  </div>
+  ${ch.stream_title?`<div class="stitle" title="${esc(ch.stream_title)}">${esc(ch.stream_title)}</div>`:''}
+  ${isRec?`<div class="metrics"><span class="metric">⏱ ${fmtDur(ch.rec_started)}</span><span class="metric">⚡ ${esc(ch.rec_speed||'—')}</span><span class="metric">💾 ${fmtB(ch.rec_bytes)}</span></div>`:''}
+  <div class="cact">
+    <div class="cact-l"><div class="sw ${mon?'on':''}" onclick="tglMon('${ch.id}')"></div>${mon?'Active':'Paused'}</div>
+    <div class="cact-r">
+      ${isRec
+        ?`<button class="ibtn rec-on" title="Stop" onclick="stopCh('${ch.id}')"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>`
+        :`<button class="ibtn" title="Record now" style="color:var(--acc)" onclick="recCh('${ch.id}')"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg></button>`}
+      <button class="ibtn" title="Logs" onclick="openLog('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h10"/></svg></button>
+      <button class="ibtn" title="Settings" onclick="openCh('${ch.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15A7.8 7.8 0 0020 12a7.8 7.8 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 00-2-1.2L15 3h-4l-.4 2.6a7.6 7.6 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7.8 7.8 0 006 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 002 1.2L11 21h4l.4-2.6a7.6 7.6 0 002-1.2l2.4 1 2-3.4z"/></svg></button>
     </div>
-  </div>`;
+  </div></div>`;
 }
-
-function renderChannels() {
-  const grid = document.getElementById('channelsGrid');
-  const sortBy = document.getElementById('channelSort')?.value || 'custom';
-  const list = Object.values(channels).sort((a,b) => {
-    switch(sortBy) {
-      case 'name_asc': return (a.display_name||'').localeCompare(b.display_name||'');
-      case 'name_desc': return (b.display_name||'').localeCompare(a.display_name||'');
-      case 'platform': return (a.platform||'').localeCompare(b.platform||'');
-      case 'recent': return b.created_at - a.created_at;
-      case 'live_first': return ((b.is_live||0)-(a.is_live||0)) || (b.created_at - a.created_at);
-      default: return (a.sort_order ?? 9999) - (b.sort_order ?? 9999);
-    }
+function renderChannels(){
+  const q=($('q').value||'').toLowerCase();
+  const s=$('sortSel').value;
+  let list=Object.values(channels).filter(c=>{
+    if(!q)return true;
+    return((c.display_name||'')+(c.platform||'')+(c.stream_title||'')).toLowerCase().includes(q);
   });
+  const cmp={name:(a,b)=>(a.display_name||'').localeCompare(b.display_name||''),platform:(a,b)=>(a.platform||'').localeCompare(b.platform||''),recent:(a,b)=>b.created_at-a.created_at,live:(a,b)=>((b.is_live||0)-(a.is_live||0))||b.created_at-a.created_at,custom:(a,b)=>(a.sort_order??9999)-(b.sort_order??9999)};
+  list.sort(cmp[s]||cmp.custom);
+  const live=list.some(c=>c.is_live||c.rec_status==='recording');
+  $('liveDot').classList.toggle('on',live);
+  $('grid').innerHTML=list.length?list.map(card).join(''):
+    `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg><b>No channels</b><span>Click "Add Channel" to start monitoring streams.</span></div>`;
+}
+async function fetchChannels(){try{const l=await api('/api/channels');channels={};l.forEach(c=>channels[c.id]=c);renderChannels()}catch{}}
+async function fetchSlots(){try{const d=await api('/api/health');$('slots').textContent=`${d.active}/${d.pi_mode?3:6}`} catch{}}
 
-  const liveCount = list.filter(c => c.is_live || c.rec_status === 'recording').length;
-  document.getElementById('live-indicator-dot').style.display = liveCount > 0 ? 'inline-block' : 'none';
+async function recCh(id){try{await api(`/api/channels/${id}/record`,{method:'POST'});toast('Recording started');fetchChannels()}catch(e){toast(e.message||'Failed',true)}}
+async function stopCh(id){try{await api(`/api/channels/${id}/stop`,{method:'POST'});toast('Stopping…');fetchChannels()}catch(e){toast(e.message,true)}}
+async function tglMon(id){const c=channels[id];if(!c)return;try{await api(`/api/channels/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({monitoring:c.monitoring===false})});fetchChannels()}catch{}}
+async function delCh(){const id=$('chId').value;if(!confirm('Remove this channel?'))return;try{await api(`/api/channels/${id}`,{method:'DELETE'});delete channels[id];renderChannels();closeCh();toast('Removed')}catch(e){toast(e.message,true)}}
 
-  if (!list.length) {
-    grid.innerHTML = `
-      <div class="empty-view" style="grid-column: 1 / -1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-        <span style="font-size:15px;font-weight:600">No channels added yet</span>
-        <span style="font-size:12px;color:var(--text-muted)">Click "Add Channel" above to start recording your favorite streams.</span>
-      </div>`;
-    return;
-  }
-  grid.innerHTML = list.map(renderCard).join('');
+/* add modal */
+function openAdd(){$('addOv').classList.add('open');setTimeout(()=>$('addUrl').focus(),50)}
+function closeAdd(){$('addOv').classList.remove('open');$('addUrl').value=''}
+async function doAdd(){
+  const url=$('addUrl').value.trim();if(!url)return;
+  $('addBtn').disabled=true;
+  try{
+    await api('/api/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,quality:$('addQ').value,format:$('addF').value,max_streams:+$('addKeep').value||0,max_duration:+$('addDur').value||0,monitoring:true})});
+    toast('Channel added');closeAdd();fetchChannels();
+  }catch(e){toast('Failed: '+e.message,true)}finally{$('addBtn').disabled=false}
 }
 
-function filterCards() {
-  const q = document.getElementById('channelSearch').value.toLowerCase();
-  document.querySelectorAll('.channel-card').forEach(card => {
-    const id = card.id.replace('card-', '');
-    const ch = channels[id];
-    if (!ch) return;
-    const text = ((ch.display_name||'') + ' ' + (ch.platform||'') + ' ' + (ch.stream_title||'')).toLowerCase();
-    card.style.display = text.includes(q) ? '' : 'none';
+/* channel settings */
+function openCh(id){const c=channels[id];if(!c)return;$('chId').value=id;$('chTitle').textContent=c.display_name||'Settings';$('chQ').value=c.quality||'';$('chF').value=c.format||'';$('chKeep').value=c.max_streams||0;$('chDur').value=c.max_duration||0;$('chNotes').value=c.notes||'';$('chOv').classList.add('open')}
+function closeCh(){$('chOv').classList.remove('open')}
+async function saveCh(){const id=$('chId').value;try{await api(`/api/channels/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({quality:$('chQ').value||null,format:$('chF').value||null,max_streams:+$('chKeep').value||0,max_duration:+$('chDur').value||0,notes:$('chNotes').value.trim()||null})});toast('Saved');closeCh();fetchChannels()}catch(e){toast(e.message,true)}}
+
+/* logs */
+function openLog(id){logCh=id;const c=channels[id];$('logTitle').textContent='LOG · '+((c?.display_name||id).toUpperCase());$('logDrawer').classList.add('open');refreshLog()}
+function closeLog(){$('logDrawer').classList.remove('open');logCh=null}
+async function refreshLog(){
+  if(!logCh)return;const c=channels[logCh];const rid=c?.rec_id||c?.last_rec_id;
+  const b=$('logBody');
+  if(!rid){b.innerHTML='<span style="color:var(--mut)">No recording session for this channel.</span>';return}
+  try{const d=await api(`/api/recordings/${rid}/log`);const l=d.log||[];
+    b.innerHTML=l.length?l.map(x=>`<div class="${x.toLowerCase().includes('error')?'err':''}">${esc(x)}</div>`).join(''):'<span style="color:var(--mut)">Waiting for output…</span>';
+    b.scrollTop=b.scrollHeight;
+  }catch{}
+}
+
+/* recordings */
+async function fetchRecordings(){try{recs=await api('/api/recordings');renderRecordings()}catch{}}
+function renderRecordings(){
+  const q=($('rq').value||'').toLowerCase();
+  const list=(Array.isArray(recs)?recs:[]).filter(r=>{
+    if(r.status==='recording'||r.status==='starting')return false;
+    if(!q)return true;
+    return((r.filename||'')+(r.channel_display_name||'')+(r.platform||'')).toLowerCase().includes(q);
   });
+  $('recCount').textContent=list.length+' recordings';
+  $('recGrid').innerHTML=list.length?list.map(r=>{
+    const size=r.bytes?fmtB(r.bytes):'—';
+    const dur=r.started_at&&r.ended_at?fmtDur(r.started_at).replace(/^(\d+):/,'$1:'):'—';
+    return `<div class="rec-card">
+    <div class="rec-thumb" onclick="${r.filepath?`window.open('/api/download/${r.id}')`:''}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><path d="M10 12l4 3-4 3z"/></svg>
+      ${r.is_favorite?`<span class="fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></span>`:''}
+      <span class="dur">${size}</span>
+    </div>
+    <div class="rec-body">
+      <div class="rec-name" title="${esc(r.filename||'')}">${esc(r.filename||r.id)}</div>
+      <div class="rec-meta"><span class="rec-status ${r.status}">${r.status}</span><span>${esc(r.channel_display_name||'')}</span><span>${new Date((r.created_at||0)*1e3).toLocaleDateString()}</span></div>
+    </div>
+    <div class="rec-act">
+      <button class="ibtn" title="Download" onclick="location='/api/download/${r.id}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+      <button class="ibtn" title="Preview" onclick="window.open('/api/preview/${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4z"/></svg></button>
+      <button class="ibtn" title="Favorite" onclick="favRec('${r.id}',${!r.is_favorite})" style="${r.is_favorite?'color:var(--warn)':''}"><svg viewBox="0 0 24 24" fill="${r.is_favorite?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></button>
+      <button class="ibtn" title="Archive" onclick="archRec('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8M10 12h4"/></svg></button>
+      <button class="ibtn" title="Delete" style="color:var(--acc)" onclick="delRec('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+    </div></div>`;
+  }).join(''):'<div class="empty"><b>No recordings yet</b><span>Finished recordings will appear here.</span></div>';
 }
+async function favRec(id,v){try{await api(`/api/recordings/${id}/favorite`,{method:'POST'});fetchRecordings()}catch{}}
+async function archRec(id){try{await api(`/api/recordings/${id}/archive`,{method:'POST'});toast('Archived');fetchRecordings()}catch(e){toast(e.message,true)}}
+async function delRec(id){if(!confirm('Delete this recording and its file?'))return;try{await api(`/api/recordings/${id}`,{method:'DELETE'});toast('Deleted');fetchRecordings()}catch(e){toast(e.message,true)}}
 
-// ── API Operations ──
-async function fetchChannels() {
-  try {
-    const res = await fetch(`${API}/api/channels`);
-    if (!res.ok) return;
-    const list = await res.json();
-    channels = {};
-    list.forEach(c => channels[c.id] = c);
-    renderChannels();
-  } catch {}
+/* settings */
+async function loadSettingsUI(){
+  try{
+    settings=await api('/api/settings');
+    $('sw-pi').classList.toggle('on',!!settings.pi_mode);
+    $('in-interval').value=settings.monitor_interval??60;
+    $('sw-autoall').classList.toggle('on',!!settings.record_on_add);
+    $('in-retention').value=settings.retention_days??0;
+    $('in-quality').value=settings.default_quality??'best';
+    $('in-format').value=settings.default_format??'mp4';
+    $('sw-conv').classList.toggle('on',!!settings.auto_convert_mp4);
+    $('sw-del').classList.toggle('on',!!settings.delete_original);
+    $('in-maxdur').value=settings.max_duration??0;
+    $('sw-stall').classList.toggle('on',!!settings.auto_stop_stalled);
+    $('in-proxy').value=settings.proxy??'';
+    $('in-extra').value=settings.extra_args??'';
+    $('sw-retry').classList.toggle('on',settings.auto_retry!==false);
+    $('in-maxretry').value=settings.max_retries??5;
+    $('in-retrydelay').value=settings.retry_delay??15;
+    $('in-webhook').value=settings.webhook_url??'';
+    $('in-cookies').value=settings.cookies_file??'';
+  }catch{}
+  fetchDisk();loadCookies();fetchYd();
 }
+async function saveSettings(){
+  try{
+    await api('/api/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      pi_mode:$('sw-pi').classList.contains('on'),monitor_interval:+$('in-interval').value||60,
+      record_on_add:$('sw-autoall').classList.contains('on'),retention_days:+$('in-retention').value||0,
+      default_quality:$('in-quality').value,default_format:$('in-format').value,
+      auto_convert_mp4:$('sw-conv').classList.contains('on'),delete_original:$('sw-del').classList.contains('on'),
+      max_duration:+$('in-maxdur').value||0,auto_stop_stalled:$('sw-stall').classList.contains('on'),
+      proxy:$('in-proxy').value.trim(),extra_args:$('in-extra').value.trim(),
+      auto_retry:$('sw-retry').classList.contains('on'),max_retries:+$('in-maxretry').value||5,
+      retry_delay:+$('in-retrydelay').value||15,webhook_url:$('in-webhook').value.trim(),
+      cookies_file:$('in-cookies').value,
+    })});
+    toast('Settings saved');fetchSlots();
+  }catch(e){toast(e.message,true)}
+}
+async function fetchDisk(){try{const d=await api('/api/disk');$('diskText').textContent=`${fmtB(d.recordings_bytes)} recordings · ${fmtB(d.free)} free`;$('diskDetail').textContent='Space used by captures on disk'}catch{}}
+async function testHook(){try{await api('/api/settings/test-webhook',{method:'POST'});toast('Test sent')}catch(e){toast(e.message,true)}}
 
-async function fetchSlots() {
-  try {
-    const res = await fetch(`${API}/api/health`);
-    const d = await res.json();
-    const el = document.getElementById('slot-indicator');
-    if (el) el.textContent = `${d.active || 0}/${d.pi_mode ? 3 : 6} slots`;
-  } catch {}
-}
+/* cookies */
+async function loadCookies(){try{const f=await api('/api/cookies');$('in-cookies').innerHTML='<option value="">None</option>'+f.map(x=>`<option value="${esc(x.filename)}">${esc(x.filename)}</option>`).join('');if(settings.cookies_file)$('in-cookies').value=settings.cookies_file;$('cookieList').innerHTML=f.map(x=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px"><span>${esc(x.filename)}</span><button class="ibtn" style="color:var(--acc)" onclick="delCookie('${esc(x.filename)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>`).join('')}catch{}}
+async function upCookies(inp){const f=inp.files[0];if(!f)return;const fd=new FormData();fd.append('file',f);try{await api('/api/cookies/upload',{method:'POST',body:fd});toast('Uploaded');loadCookies()}catch(e){toast(e.message,true)}inp.value=''}
+async function delCookie(n){try{await api(`/api/cookies/${encodeURIComponent(n)}`,{method:'DELETE'});loadCookies()}catch(e){toast(e.message,true)}}
 
-async function fetchDisk() {
-  try {
-    const res = await fetch(`${API}/api/disk`);
-    const d = await res.json();
-    const el = document.getElementById('diskText');
-    if (el) el.textContent = `${fmtBytes(d.recordings_bytes)} used · ${fmtBytes(d.free)} free`;
-  } catch {}
-}
+/* yt-dlp */
+async function fetchYd(){try{const d=await api('/api/ytdlp-version');$('ydVer').textContent='Version: '+d.current+(d.latest===d.current?' (latest)':'')}catch{$('ydVer').textContent='unknown'}}
+async function updYd(){const b=$('ydBtn');b.disabled=true;b.textContent='Updating…';try{const d=await api('/api/ytdlp-update',{method:'POST'});toast(d.success?'Updated to '+d.version:'Update failed',!d.success);fetchYd()}catch{toast('Update failed',true)}finally{b.disabled=false;b.textContent='Update'}}
 
-async function recordChannel(id) {
-  try {
-    const res = await fetch(`${API}/api/channels/${id}/record`, { method: 'POST' });
-    if (!res.ok) {
-      toast('Channel offline or unavailable', true);
-      return;
-    }
-    toast('Recording started');
-    fetchChannels();
-  } catch (e) { toast('Error: ' + e.message, true); }
-}
+/* backup */
+async function exportCfg(){try{const d=await api('/api/export');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='streamrec-backup.json';a.click();toast('Exported')}catch{}}
+async function importCfg(inp){const f=inp.files[0];if(!f)return;try{const d=JSON.parse(await f.text());await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:d.channels||{},settings:d.settings||{},merge:true})});toast('Imported');fetchChannels();loadSettingsUI()}catch(e){toast('Import failed: '+e.message,true)}inp.value=''}
 
-async function stopChannel(id) {
-  try {
-    await fetch(`${API}/api/channels/${id}/stop`, { method: 'POST' });
-    toast('Stopping stream…');
-    fetchChannels();
-  } catch (e) { toast('Error: ' + e.message, true); }
+/* account */
+async function loadAcc(){
+  try{const d=await api('/api/account');acc.exists=!!d.exists;
+    if(d.exists){acc.username=d.username;acc.avatar=d.avatar;acc.created_at=d.created_at;
+      try{await api('/api/channels');acc.authed=true}catch{acc.authed=false}}
+  }catch{}
+  renderAcc();
+  if(acc.exists&&!acc.authed)openAcc();
+  if(!acc.exists&&!localStorage.streamrecGuestSkip)openAcc();
 }
+function renderAcc(){
+  const n=acc.exists&&acc.authed?(acc.username||'User'):'Guest';
+  $('hdName').textContent=n;$('hdAv').textContent=(n[0]||'G').toUpperCase();
+}
+function openAcc(){
+  $('accCreate').style.display=(!acc.exists)?'flex':'none';
+  $('accLogin').style.display=(acc.exists&&!acc.authed)?'flex':'none';
+  $('accProfile').style.display=(acc.exists&&acc.authed)?'flex':'none';
+  $('accTitle').textContent=acc.exists&&acc.authed?'Account':acc.exists?'Log In':'Create Account';
+  if(acc.exists&&acc.authed){$('profName').textContent=acc.username||'';$('profAv').textContent=(acc.username||'U')[0].toUpperCase();$('profSince').textContent=acc.created_at?'since '+new Date(acc.created_at*1e3).toLocaleDateString():''}
+  $('accOv').classList.add('open');
+}
+function closeAcc(){$('accOv').classList.remove('open');localStorage.streamrecGuestSkip='1'}
+async function createAcc(){try{await api('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('acUser').value.trim(),password:$('acPass').value,confirm_password:$('acPass2').value})});toast('Account created');await loadAcc();closeAcc()}catch(e){toast(e.message,true)}}
+async function loginAcc(){try{await api('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('alUser').value.trim(),password:$('alPass').value})});toast('Logged in');await loadAcc();closeAcc();fetchChannels()}catch(e){toast(e.message,true)}}
+async function saveAcc(){const nw=$('pcNew').value;if(!nw)return toast('Enter new password');try{await api('/api/account',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:$('pcCur').value,new_password:nw,confirm_new_password:nw})});toast('Updated');$('pcCur').value='';$('pcNew').value=''}catch(e){toast(e.message,true)}}
+async function logoutAcc(){try{await api('/api/account/logout',{method:'POST'})}catch{}acc.authed=false;renderAcc();closeAcc();openAcc()}
 
-async function toggleMonitoring(id) {
-  const ch = channels[id];
-  if (!ch) return;
-  const next = !ch.monitoring;
-  try {
-    await fetch(`${API}/api/channels/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ monitoring: next })
-    });
-    fetchChannels();
-  } catch {}
-}
+/* polling — pauses when tab hidden to stay light on resources */
+function startPoll(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(()=>{
+  if(document.hidden)return;
+  fetchChannels();fetchSlots();
+  if(logCh&&$('logDrawer').classList.contains('open'))refreshLog();
+  if($('view-recordings').classList.contains('active'))fetchRecordings();
+},5000)}
 
-async function deleteChannel(id) {
-  if (!confirm('Remove this channel?')) return;
-  try {
-    await fetch(`${API}/api/channels/${id}`, { method: 'DELETE' });
-    delete channels[id];
-    renderChannels();
-    toast('Channel removed');
-  } catch (e) { toast('Error: ' + e.message, true); }
-}
-
-// ── Modals & Add ──
-function openAddModal() {
-  document.getElementById('addOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('addUrl').focus(), 60);
-}
-function closeAddModal() {
-  document.getElementById('addOverlay').classList.remove('open');
-  document.getElementById('addUrl').value = '';
-}
-
-function detectPlatform() {
-  const u = document.getElementById('addUrl').value.toLowerCase();
-  const el = document.getElementById('addPlatformDetect');
-  if (u.includes('twitch.tv')) el.textContent = 'Detected: Twitch 🟣';
-  else if (u.includes('youtube.com') || u.includes('youtu.be')) el.textContent = 'Detected: YouTube 🔴';
-  else if (u.includes('tiktok.com')) el.textContent = 'Detected: TikTok ⚫';
-  else if (u.includes('kick.com')) el.textContent = 'Detected: Kick 🟢';
-  else if (u.includes('bilibili.com')) el.textContent = 'Detected: Bilibili 🔵';
-  else el.textContent = '';
-}
-
-async function confirmAdd() {
-  const url = document.getElementById('addUrl').value.trim();
-  if (!url) return;
-  const btn = document.getElementById('addConfirmBtn');
-  btn.disabled = true;
-  try {
-    const res = await fetch(`${API}/api/channels`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        quality: document.getElementById('addQuality').value,
-        format: document.getElementById('addFormat').value,
-        max_streams: parseInt(document.getElementById('addMaxStreams').value) || 0,
-        max_duration: parseInt(document.getElementById('addMaxDuration').value) || 0,
-        notes: document.getElementById('addNotes').value.trim(),
-        monitoring: true,
-      })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const d = await res.json();
-    toast(`Added ${d.display_name || d.platform}`);
-    closeAddModal();
-    fetchChannels();
-  } catch(e) {
-    toast('Failed to add channel: ' + e.message, true);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function openChSettings(id) {
-  const ch = channels[id];
-  if (!ch) return;
-  document.getElementById('chSettingsId').value = id;
-  document.getElementById('chSettingsTitle').textContent = ch.display_name || 'Channel Settings';
-  document.getElementById('chQuality').value = ch.quality || '';
-  document.getElementById('chFormat').value = ch.format || '';
-  document.getElementById('chMaxStreams').value = ch.max_streams || 0;
-  document.getElementById('chMaxDuration').value = ch.max_duration || 0;
-  document.getElementById('chNotes').value = ch.notes || '';
-  document.getElementById('chSettingsOverlay').classList.add('open');
-}
-function closeChSettings() {
-  document.getElementById('chSettingsOverlay').classList.remove('open');
-}
-async function saveChSettings() {
-  const id = document.getElementById('chSettingsId').value;
-  try {
-    await fetch(`${API}/api/channels/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        quality: document.getElementById('chQuality').value || null,
-        format: document.getElementById('chFormat').value || null,
-        max_streams: parseInt(document.getElementById('chMaxStreams').value) || 0,
-        max_duration: parseInt(document.getElementById('chMaxDuration').value) || 0,
-        notes: document.getElementById('chNotes').value.trim() || null,
-      })
-    });
-    toast('Settings saved');
-    closeChSettings();
-    fetchChannels();
-  } catch (e) { toast('Error: ' + e.message, true); }
-}
-
-// ── Logs ──
-function openLog(chId) {
-  activeLogChId = chId;
-  const ch = channels[chId];
-  document.getElementById('logTitle').textContent = `LOGS · ${(ch?.display_name || chId).toUpperCase()}`;
-  document.getElementById('logDrawer').classList.add('open');
-  refreshLog();
-}
-function closeLog() {
-  document.getElementById('logDrawer').classList.remove('open');
-  activeLogChId = null;
-}
-async function refreshLog() {
-  if (!activeLogChId) return;
-  const ch = channels[activeLogChId];
-  const recId = ch?.rec_id;
-  const body = document.getElementById('logBody');
-  if (!recId) {
-    body.innerHTML = '<div style="color:var(--text-muted)">No active recording session for this channel.</div>';
-    return;
-  }
-  try {
-    const res = await fetch(`${API}/api/recordings/${recId}/log`);
-    const data = await res.json();
-    const lines = data.log || [];
-    body.innerHTML = lines.map(l => `<div class="log-line${l.toLowerCase().includes('error')?' err':''}">${esc(l)}</div>`).join('');
-    body.scrollTop = body.scrollHeight;
-  } catch {}
-}
-
-// ── Settings ──
-async function loadSettings() {
-  try {
-    const res = await fetch(`${API}/api/settings`);
-    const s = await res.json();
-    globalSettings = s;
-    setSwitch('s-pi-mode', !!s.pi_mode);
-    document.getElementById('s-interval').value = s.monitor_interval ?? 60;
-    setSwitch('s-record-on-add', !!s.record_on_add);
-    document.getElementById('s-retention-days').value = s.retention_days ?? 0;
-    document.getElementById('s-quality').value = s.default_quality ?? 'best';
-    document.getElementById('s-format').value = s.default_format ?? 'mp4';
-    setSwitch('s-auto-convert', !!s.auto_convert_mp4);
-    setSwitch('s-delete-original', !!s.delete_original);
-    document.getElementById('s-proxy').value = s.proxy ?? '';
-    document.getElementById('s-extra-args').value = s.extra_args ?? '';
-    setSwitch('s-auto-retry', s.auto_retry !== false);
-    document.getElementById('s-max-retries').value = s.max_retries ?? 5;
-    document.getElementById('s-retry-delay').value = s.retry_delay ?? 15;
-    document.getElementById('s-webhook-url').value = s.webhook_url ?? '';
-    setSwitch('s-auto-stop-stalled', !!s.auto_stop_stalled);
-  } catch {}
-}
-
-async function saveSettings() {
-  const body = {
-    pi_mode: document.getElementById('s-pi-mode').classList.contains('active'),
-    monitor_interval: parseInt(document.getElementById('s-interval').value) || 60,
-    record_on_add: document.getElementById('s-record-on-add').classList.contains('active'),
-    retention_days: parseInt(document.getElementById('s-retention-days').value) || 0,
-    default_quality: document.getElementById('s-quality').value,
-    default_format: document.getElementById('s-format').value,
-    auto_convert_mp4: document.getElementById('s-auto-convert').classList.contains('active'),
-    delete_original: document.getElementById('s-delete-original').classList.contains('active'),
-    proxy: document.getElementById('s-proxy').value.trim(),
-    extra_args: document.getElementById('s-extra-args').value.trim(),
-    auto_retry: document.getElementById('s-auto-retry').classList.contains('active'),
-    max_retries: parseInt(document.getElementById('s-max-retries').value) || 5,
-    retry_delay: parseInt(document.getElementById('s-retry-delay').value) || 15,
-    webhook_url: document.getElementById('s-webhook-url').value.trim(),
-    auto_stop_stalled: document.getElementById('s-auto-stop-stalled').classList.contains('active'),
-  };
-  try {
-    await fetch(`${API}/api/settings`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    toast('Settings saved successfully');
-    fetchSlots();
-  } catch (e) { toast('Error saving: ' + e.message, true); }
-}
-
-async function testWebhook() {
-  const btn = document.getElementById('btnTestWebhook');
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
-  try {
-    const res = await fetch(`${API}/api/settings/test-webhook`, { method: 'POST' });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
-    toast('Test notification sent! 🔔');
-  } catch (e) {
-    toast('Webhook error: ' + e.message, true);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Test Webhook';
-  }
-}
-
-async function fetchYtdlpVersion() {
-  try {
-    const res = await fetch(`${API}/api/ytdlp-version`);
-    const d = await res.json();
-    document.getElementById('ytdlpVersion').textContent = `Version: ${d.current} ${d.latest === d.current ? '(latest)' : ''}`;
-  } catch {}
-}
-
-async function updateYtdlp() {
-  const btn = document.getElementById('ytdlpUpdateBtn');
-  btn.disabled = true;
-  btn.textContent = 'Updating…';
-  try {
-    const res = await fetch(`${API}/api/ytdlp-update`, { method: 'POST' });
-    const d = await res.json();
-    toast(d.success ? `Updated to ${d.version}` : 'Update failed', !d.success);
-    fetchYtdlpVersion();
-  } catch(e) {
-    toast('Update failed', true);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Update yt-dlp';
-  }
-}
-
-async function exportConfig() {
-  try {
-    const res = await fetch(`${API}/api/export`);
-    const data = await res.json();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'streamrec-backup.json';
-    a.click();
-    toast('Config exported');
-  } catch {}
-}
-
-async function importConfig(input) {
-  const file = input.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    await fetch(`${API}/api/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channels: data.channels || {}, settings: data.settings || {}, merge: true })
-    });
-    toast('Configuration imported');
-    fetchChannels();
-    loadSettings();
-  } catch(e) { toast('Import failed: ' + e.message, true); }
-  input.value = '';
-}
-
-// ── Theme ──
-function toggleTheme() {
-  const isLight = document.documentElement.classList.toggle('light');
-  localStorage.setItem('streamrecTheme', isLight ? 'light' : 'dark');
-}
-if (localStorage.getItem('streamrecTheme') === 'light') {
-  document.documentElement.classList.add('light');
-}
-
-// ── Polling & Clock ──
-setInterval(() => {
-  document.querySelectorAll('.channel-card.recording').forEach(card => {
-    const id = card.id.replace('card-', '');
-    const ch = channels[id];
-    if (ch && ch.rec_started) {
-      const dur = card.querySelector('.ch-dur');
-      if (dur) dur.textContent = fmtDur(ch.rec_started);
-    }
-  });
-}, 1000);
-
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(() => {
-    fetchChannels();
-    fetchSlots();
-    if (activeLogChId) refreshLog();
-  }, pollInterval);
-}
-
-// ── Initialize ──
-async function init() {
-  await Promise.allSettled([fetchChannels(), loadSettings(), fetchSlots()]);
-  startPolling();
-}
-init();
+/* init */
+(async()=>{await Promise.allSettled([fetchChannels(),loadAcc(),fetchSlots()]);startPoll()})();
 </script>
 </body>
 </html>

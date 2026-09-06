@@ -1,348 +1,174 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/python-3.12+-blue?logo=python&logoColor=white" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/yt--dlp-latest-red?logo=youtube&logoColor=white" alt="yt-dlp">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/platforms-30+-purple" alt="30+ Platforms">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+  <img src="https://img.shields.io/badge/dependencies-4-purple" alt="4 dependencies">
 </p>
 
-<h1 align="center">🔴 StreamRec</h1>
+<h1 align="center">StreamRec</h1>
 
 <p align="center">
-  <strong>Self-hosted live stream recorder with a sleek, modern web UI.</strong><br>
-  Automatically monitor and record live streams from 30+ platforms — all from a clean, unified dashboard.
+  <strong>Self-hosted live stream recorder with a fast, dependency-free web UI.</strong><br>
+  Monitor channels across 30+ platforms and capture streams automatically — with recordings library, log viewer, webhooks, and optional password protection.
 </p>
 
 ---
 
-## 📑 Table of Contents
+## Why StreamRec
 
-- [Features](#-features)
-- [Getting Started](#-getting-started)
-- [Updating](#-updating)
-- [VPN / Proxy Setup](#-vpn--proxy-setup)
-- [Cookies / Age-Restricted Streams](#-cookies--age-restricted-streams)
-- [Configuration](#-configuration)
-- [Architecture](#️-architecture)
-- [Project Structure](#-project-structure)
-- [API Reference](#-api-reference)
-- [Raspberry Pi / Low-Power Devices](#-raspberry-pi--low-power-devices)
-- [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
-- [License](#-license)
+- **Zero frontend dependencies** — the entire UI is one HTML file. No npm, no build step, no CDN requests. Loads instantly, works offline.
+- **Light on resources** — polling pauses when the browser tab is hidden; a Raspberry Pi mode halves CPU/RAM/disk overhead.
+- **Set-and-forget** — channels are polled for live status and recorded automatically the moment they go online, with infinite retry/backoff on dropouts.
+- **Recordings library** — browse, preview, favorite, archive, and download finished captures from the web UI.
 
----
+## Features
 
-## ✨ Features
+**Recording**
+- Auto-record when a channel goes live (per-channel toggle or global master switch)
+- One-click manual recording from the dashboard
+- Quality selection (Best / 1080p / 720p / 480p / Lowest) and format (MP4 / MKV / TS)
+- Per-channel overrides for quality, format, max duration, and max streams kept
+- Automatic faststart remux on completion for smooth playback
+- Stalled-stream detection with optional auto-stop
 
-### 🌍 Multi-Platform Support
-Record live streams from **30+ platforms** including:
+**Reliability**
+- Auto-retry with configurable attempts and delay when a stream drops
+- Process-tree termination (no orphaned yt-dlp/ffmpeg after crashes)
+- Startup sweep kills leftover recorder processes from a previous unclean stop
+- Live log viewer for the active session, retained after it ends
 
-| Platform | Platform | Platform | Platform |
-|----------|----------|----------|----------|
-| YouTube | Twitch | TikTok | Kick |
-| Bilibili | Instagram | Facebook | Twitter/X |
-| Rumble | Vimeo | Dailymotion | Niconico |
-| Douyin | Huya | Douyu | Afreeca |
-| Sooplive | Naver | Weibo | Bigo |
-| Twitcasting | Pandalive | Stripchat | Chaturbate |
-| Cam4 | MyFreeCams | BongaCams | CamSoda |
-| CamModels | Streamate | Flirt4Free | _…and more via yt-dlp_ |
+**Platform support** — 30+ sites via yt-dlp, including YouTube, Twitch, TikTok, Kick, Bilibili, Douyin, Huya, Douyu, SOOP, Niconico, Twitcasting, Bigo, Dailymotion, Facebook, Instagram, Twitter/X, Vimeo, Rumble, and more.
 
-### 🎯 Core Capabilities
-- **Automatic Live Detection** — Periodically checks channel statuses and starts recording automatically
-- **Multi-Channel Monitoring** — Monitor dozens of streamers simultaneously with individual active/paused toggles
-- **One-Click Instant Recording** — Manually trigger or stop recordings at any time directly from the channel cards
-- **Real-Time Stream Stats** — Live recording counter, capture bitrate/speed, and file size on disk updated in real time
-- **Quality & Format Selection** — Choose Best, 1080p, 720p, 480p, or Lowest quality per channel, in MP4, MKV, or TS
-- **Per-Channel Notes & Settings** — Customize proxies, credentials, quality overrides, and notes per streamer
-- **Stream Title & Avatar Tracking** — Live badges, avatars, and broadcast titles refreshed automatically
+**Security**
+- Optional local account (PBKDF2-hashed password) — when set, the whole API requires a session
+- Same-origin protection for cookie-authenticated state changes
+- SSRF guards on channel URLs and webhooks
+- Dangerous yt-dlp flags blocked in user-supplied extra args
 
-### 📡 Smart Recording & Reliability
-- **Twitch & HLS Stream Reliability** — Native handling for Twitch and live HLS streams without failed rewind conflicts
-- **Auto-Retry with Backoff** — Automatically reconnects if a stream drops, with configurable retry count and delay
-- **Post-Processing & Faststart Remux** — Optional lossless MP4 remuxing and container healing for interrupted streams
-- **Safe Process Termination** — Comprehensive process tree termination (`taskkill` on Windows / process group on Unix) prevents orphaned background processes or file locking
-- **Stalled Stream Detection** — Auto-stops recordings if incoming data stalls for more than 2 minutes
-- **Webhooks & Discord Embeds** — Rich embed notifications for Discord and JSON alerts for Slack/custom webhooks, with an in-UI **Test Webhook** button
+**Notifications** — Discord embeds (rich: thumbnail, duration, size) or generic JSON webhooks for Slack/ntfy/custom.
 
-### 🖥️ Modernized Web Dashboard
-- **Focused Two-View Layout** — Clean, distraction-free **Channels** and **Settings** navigation
-- **Dark & Light Themes** — Toggle instantly between modern dark glow and clean light mode
-- **Categorized Settings Center** — Six dedicated settings panes:
-  1. 📁 **General & Storage** — Directories, retention policies, and MP4 remuxing
-  2. 🎬 **Recording & Quality** — Default qualities, max duration, and concurrent slot caps
-  3. 🌐 **Network & Engine** — Proxy, retry delays, yt-dlp version info and 1-click update
-  4. 🔔 **Notifications** — Webhook alerts with instant test delivery
-  5. 🍪 **Cookies & Auth** — Upload and manage Netscape cookies for age-restricted channels
-  6. ⚙️ **System & Maintenance** — Configuration export, import, and factory reset
-- **Live Output Drawer** — Inspect real-time `yt-dlp` logs with one click
-- **Responsive & Lightweight** — Pure vanilla CSS/JS with zero build steps or heavy node dependencies
+## Getting Started
 
----
-
-## 🚀 Getting Started
-
-### Docker Compose (Recommended)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/orhogi/streamerREC.git
-   cd streamerREC
-   ```
-
-2. **Start the application:**
-   ```bash
-   docker compose up -d
-   ```
-
-3. **Open your browser:**
-   ```text
-   http://localhost:8080
-   ```
-
-Your recordings will be saved in the `./recordings` directory.
-
-### Docker Run
+### Docker (recommended)
 
 ```bash
-docker build -t streamrec .
-docker run -d \
-  --name streamrec \
-  -p 8080:8080 \
-  -v ./recordings:/recordings \
-  --restart unless-stopped \
-  streamrec
+git clone https://github.com/orhogi/streamerREC.git
+cd streamerREC
+docker compose up -d
 ```
 
-### Manual Installation (Bare Metal / Dev)
+Open `http://localhost:8080`. Recordings land in `./recordings`.
 
-**Prerequisites:**
-- Python 3.12+
-- [FFmpeg](https://ffmpeg.org/download.html)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)
+### Manual
+
+Prerequisites: Python 3.12+, [FFmpeg](https://ffmpeg.org/download.html), [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation) on PATH.
 
 ```bash
 pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
----
+Open `http://localhost:8000`. Recordings default to `~/StreamRec/recordings`.
 
-## 🔄 Updating
+## Configuration
 
-### Docker
-
-```bash
-cd streamerREC
-git pull
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
-
-Your channels, settings, and completed recordings are stored in `./recordings/state.json` and persist across updates.
-
-### Manual
-
-```bash
-cd streamerREC
-git pull
-pip install -r requirements.txt --upgrade
-```
-
----
-
-## 🔒 VPN / Proxy Setup
-
-StreamRec includes a built-in WireGuard proxy (wireproxy) sidecar container exposing a SOCKS5 proxy at `socks5://wireproxy:1080` that you can assign to individual channels or globally.
-
-Useful for:
-- Recording geo-blocked streams
-- Routing specific site traffic through a VPN
-- Bypassing IP rate limits on specific platforms
-
-### 1. Add your WireGuard config
-
-Place your WireGuard config file at `streamerREC/wg0.conf`:
-
-```ini
-[Interface]
-PrivateKey = <your private key>
-Address = 10.x.x.x/32
-DNS = 1.1.1.1
-
-[Peer]
-PublicKey = <server public key>
-Endpoint = <server>:<port>
-AllowedIPs = 0.0.0.0/0
-```
-
-### 2. Rebuild with the VPN config
-
-```bash
-docker compose down && docker compose build && docker compose up -d
-```
-
-### 3. Assign the proxy
-
-- **Per Channel:** Open channel settings → set **Proxy** to `socks5://wireproxy:1080`
-- **Globally:** Go to **Settings → Network & Engine** → set **Global Proxy**
-
----
-
-## 🍪 Cookies / Age-Restricted Streams
-
-For platforms requiring authentication or age verification:
-
-1. Export your browser cookies using an extension (e.g., **Get cookies.txt LOCALLY**)
-2. Go to **Settings → Cookies & Auth** in the web UI and upload the `.txt` file
-3. Assign the cookies file to individual channels or globally
-
----
-
-## 🧰 Configuration
-
-### Environment Variables
+### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STREAMREC_PI_MODE` | `0` | Set to `1` to enable Raspberry Pi / low-power optimizations |
-| `RECORDINGS_DIR` | `~/StreamRec/recordings` | Override base recordings directory |
+| `RECORDINGS_DIR` | `~/StreamRec/recordings` | Where recordings and state are stored |
+| `STREAMREC_PI_MODE` | `0` | `1` enables low-power optimizations (fewer pollers, capped buffers, 1 ffmpeg thread) |
+| `STATIC_DIR` | directory of `main.py` | Where `index.html` is served from |
 
-### Settings (Web UI)
+### Web UI settings
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Low-power / Pi mode | Off | Reduces CPU/RAM/IO for single-board computers |
-| Check Interval | 60s | How often to poll channel live status |
-| Default Quality | `best` | Default resolution/quality profile |
-| Default Format | `mp4` | Default output container format |
-| Auto-convert to MP4 | Off | Remux finished recordings to MP4 |
-| Delete Original | Off | Remove source container after MP4 conversion |
-| Auto-Retry | On | Reconnect automatically on stream dropouts |
-| Max Retries | 5 | Max reconnection attempts per session |
-| Retry Delay | 15s | Seconds between reconnection attempts |
-| Global Proxy | — | Proxy URL applied across all channels |
-| Webhook URL | — | Discord or Slack/HTTP endpoint for live alerts |
-| Auto-stop stalled | Off | Force-stop recordings when no new data arrives |
+Everything else is configured in the UI: check interval, default quality/format, auto-convert to MP4, retention days, max duration, auto-retry, proxy, cookies, webhooks, and low-power mode. All settings persist in `state.json` inside the recordings directory.
 
----
+## Recordings layout
 
-## 🏗️ Architecture
-
-```text
-─────────────────────────────────────────────
-              Browser
-          (index.html – SPA)
-─────────────────┬───────────────────────────
-                 │ REST API
-─────────────────▼───────────────────────────
-             FastAPI Server
-              (main.py)
-
-  ┌────────────┐ ┌────────────┐ ┌─────────┐
-  │  Channel   │ │ Recording  │ │ Monitor │
-  │  Manager   │ │  Engine    │ │  Loop   │
-  └────────────┘ └─────┬──────┘ └─────────┘
-                       │
-                 ┌─────▼──────┐
-                 │  yt-dlp +  │
-                 │   FFmpeg   │
-                 └────────────┘
-─────────────────────────────────────────────
-                 │
-          ┌──────▼──────┐   ┌─────────────┐
-          │ /recordings │   │  wireproxy  │
-          │  (volume)   │   │ (WireGuard) │
-          └─────────────┘   └─────────────┘
+```
+recordings/
+├── Twitch/<channel>/<date>/<name>_<date>_<time>.mp4
+├── Kick/<channel>/<date>/…
+├── cookies/          uploaded cookies.txt files
+├── _archived/        archived recordings
+├── state.json        channels, settings, recording index
+└── account.json      local account (only if you set a password)
 ```
 
-- **Frontend:** Responsive SPA with dark/light themes, zero npm build step
-- **Backend:** FastAPI with non-blocking async subprocess execution
-- **Engine:** `yt-dlp` and `FFmpeg`
-- **State:** Persistent JSON volume storage
+## Cookies / age-restricted streams
 
----
+1. Export cookies from your browser with an extension like *Get cookies.txt LOCALLY*
+2. Upload the `.txt` in **Settings → Cookies**
+3. Assign it per channel or globally
 
-## 📁 Project Structure
+## VPN / proxy
 
-```text
+An optional WireProxy sidecar exposes your WireGuard tunnel as a SOCKS5 proxy. It is **not** started by default:
+
+```bash
+# place your WireGuard config at ./wg0.conf first
+docker compose --profile vpn up -d
+```
+
+Then set the proxy per channel or globally to `socks5://wireproxy:1080`.
+
+## Authentication
+
+The app runs in open guest mode until you create an account (first-run prompt). Once an account exists, the API requires login. Deleting the account from the account panel returns the app to guest mode.
+
+## Updating yt-dlp
+
+**Settings → System → Update** updates yt-dlp in place (pip, with a binary fallback). Keeping yt-dlp current matters — extractor breakage is the most common recording failure.
+
+## API
+
+FastAPI auto-docs at `/docs`. Quick reference:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET/POST` | `/api/channels` | List / add channels |
+| `PATCH/DELETE` | `/api/channels/{id}` | Update / delete a channel |
+| `POST` | `/api/channels/{id}/record` `…/stop` `…/kill` | Recording control |
+| `POST` | `/api/channels/{id}/refresh` | Re-fetch metadata + live status |
+| `GET` | `/api/recordings` | Recording index |
+| `GET` | `/api/preview/{id}` `…/download/{id}` `…/{id}/log` | File access |
+| `POST` | `/api/recordings/{id}/favorite` `…/archive` | Organize |
+| `GET/PATCH` | `/api/settings` | Configuration |
+| `GET/POST` | `/api/account` | Local auth |
+| `GET` | `/api/health` `/api/disk` | Status |
+
+## Raspberry Pi / low-power mode
+
+Set `STREAMREC_PI_MODE=1` (or toggle in Settings): concurrent subprocess cap drops 6 → 3, polling intervals double, ffmpeg runs single-threaded, and download buffers shrink to 32 KB.
+
+## Project structure
+
+```
 streamerREC/
-├── main.py              # FastAPI backend, routes, process engine, monitor loop
-├── index.html           # Modern frontend SPA (CSS/JS embedded)
-├── Dockerfile           # StreamRec Docker container definition
-├── Dockerfile.wireproxy # Wireproxy sidecar container
-├── docker-compose.yml   # Multi-container Compose service config
-├── requirements.txt     # Python dependencies
-├── screenshots/         # Documentation assets
-├── LICENSE              # MIT License
-└── README.md
+├── main.py               # FastAPI backend — API, recording engine, monitor loop
+├── index.html            # entire frontend (single file, no build)
+├── Dockerfile            # main container
+├── Dockerfile.wireproxy  # optional VPN sidecar
+├── docker-compose.yml
+└── requirements.txt      # 4 packages
 ```
 
----
+## Troubleshooting
 
-## 📖 API Reference
+| Symptom | Fix |
+|---------|-----|
+| Recording fails immediately | Update yt-dlp (Settings → System). Extractors break often. |
+| Logs empty during recording | Update yt-dlp — very old versions silence output with `--print`. |
+| "URL rejected: private/internal host" | You added a LAN/local URL — blocked intentionally (SSRF guard). |
+| Doubled recordings after a crash | Fixed by the startup sweep; make sure you're on the latest code. |
+| Streams 403 on Twitch with cookies | Re-export fresh cookies; Twitch rotates tokens aggressively. |
 
-<details>
-<summary><strong>Channels</strong></summary>
+## Contributing
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/channels` | Add a new channel |
-| `GET` | `/api/channels` | List all monitored channels |
-| `PATCH` | `/api/channels/{id}` | Update channel settings / toggle monitoring |
-| `DELETE` | `/api/channels/{id}` | Delete a channel |
-| `POST` | `/api/channels/{id}/record` | Start recording immediately |
-| `POST` | `/api/channels/{id}/stop` | Stop recording gracefully |
-| `POST` | `/api/channels/{id}/kill` | Force-kill recording process |
-| `POST` | `/api/channels/{id}/refresh` | Check channel status & metadata now |
-| `POST` | `/api/channels/reorder` | Update channel sort orders |
-| `POST` | `/api/channels/bulk` | Bulk record / stop / delete |
-| `POST` | `/api/channels/bulk-edit` | Bulk update quality / format |
+PRs welcome. Keep the frontend a single file and dependency-free.
 
-</details>
+## License
 
-<details>
-<summary><strong>Settings & Engine</strong></summary>
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/settings` | Get current settings |
-| `PATCH` | `/api/settings` | Update configuration |
-| `POST` | `/api/settings/test-webhook` | Send a test notification to configured webhook |
-| `GET` | `/api/ytdlp-version` | Get installed yt-dlp version |
-| `POST` | `/api/ytdlp-update` | Update yt-dlp to latest release |
-| `GET` | `/api/cookies` | List uploaded cookies files |
-| `POST` | `/api/cookies/upload` | Upload a Netscape cookies file |
-| `DELETE` | `/api/cookies/{filename}` | Delete a cookies file |
-| `GET` | `/api/export` | Export settings and channels as JSON |
-| `POST` | `/api/import` | Import configuration JSON |
-| `GET` | `/api/disk` | Disk capacity and free space stats |
-| `GET` | `/api/health` | Service health and active slot usage |
-
-</details>
-
----
-
-## 🍓 Raspberry Pi / Low-Power Devices
-
-Enable Pi mode in `docker-compose.yml` or via environment:
-
-```yaml
-environment:
-  - STREAMREC_PI_MODE=1
-```
-
-Optimizations applied:
-- Concurrent subprocess limit reduced (6 → 3)
-- Polling intervals relaxed to save CPU cycles
-- FFmpeg thread count constrained to prevent thermal throttling
-- yt-dlp buffer capped at 32 KB to minimize memory consumption
-
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
